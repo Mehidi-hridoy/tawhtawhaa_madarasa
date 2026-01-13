@@ -1,0 +1,494 @@
+{% extends 'base.html' %}
+{% load crispy_forms_tags %}
+{% load static %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <!-- Hero Section -->
+    <div class="row mb-5">
+        <div class="col-lg-8 mx-auto text-center">
+            <h1 class="display-5 fw-bold mb-3">Support Islamic Education</h1>
+            <p class="lead text-muted mb-4">
+                Your donation helps us provide authentic Islamic education to students worldwide. 
+                Every contribution makes a difference in spreading knowledge.
+            </p>
+            <div class="d-flex flex-wrap gap-3 justify-content-center">
+                <span class="badge bg-primary py-2 px-3">
+                    <i class="fas fa-hand-holding-heart me-2"></i>Zakat Accepted
+                </span>
+                <span class="badge bg-success py-2 px-3">
+                    <i class="fas fa-check-circle me-2"></i>100% Donation Policy
+                </span>
+                <span class="badge bg-warning py-2 px-3">
+                    <i class="fas fa-receipt me-2"></i>Tax Deductible
+                </span>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Donation Form -->
+        <div class="col-lg-8">
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-body p-4">
+                    <h3 class="fw-bold mb-4">
+                        <i class="fas fa-donate text-primary me-2"></i>Make a Donation
+                    </h3>
+                    
+                    <form method="POST" id="donationForm">
+                        {% csrf_token %}
+                        
+                        <!-- Donor Information -->
+                        <div class="row mb-4">
+                            <div class="col-md-6">
+                                {{ form.donor_name|as_crispy_field }}
+                            </div>
+                            <div class="col-md-6">
+                                {{ form.donor_email|as_crispy_field }}
+                            </div>
+                        </div>
+                        
+                        <div class="row mb-4">
+                            <div class="col-md-6">
+                                {{ form.donor_phone|as_crispy_field }}
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Donation Amount (BDT)</label>
+                                <div class="input-group">
+                                    <span class="input-group-text">৳</span>
+                                    {{ form.amount }}
+                                </div>
+                                <small class="form-text text-muted">Minimum donation: ৳100</small>
+                            </div>
+                        </div>
+                        
+                        <!-- Donation Type -->
+                        <div class="mb-4">
+                            <h6 class="fw-bold mb-3">Donation Type</h6>
+                            <div class="row">
+                                <div class="col-md-4 mb-3">
+                                    <div class="form-check card border">
+                                        <div class="card-body text-center">
+                                            {{ form.is_zakat }}
+                                            <label class="form-check-label fw-bold" for="{{ form.is_zakat.id_for_label }}">
+                                                <i class="fas fa-scale-balanced text-success me-2"></i>Zakat
+                                            </label>
+                                            <p class="small text-muted mt-2 mb-0">Purify your wealth</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <div class="form-check card border">
+                                        <div class="card-body text-center">
+                                            {{ form.is_sadaqah }}
+                                            <label class="form-check-label fw-bold" for="{{ form.is_sadaqah.id_for_label }}">
+                                                <i class="fas fa-heart text-danger me-2"></i>Sadaqah
+                                            </label>
+                                            <p class="small text-muted mt-2 mb-0">Voluntary charity</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <div class="form-check card border">
+                                        <div class="card-body text-center">
+                                            <input type="checkbox" class="form-check-input" id="generalDonation" checked disabled>
+                                            <label class="form-check-label fw-bold" for="generalDonation">
+                                                <i class="fas fa-hand-holding-usd text-primary me-2"></i>General
+                                            </label>
+                                            <p class="small text-muted mt-2 mb-0">General donation</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Purpose -->
+                        <div class="mb-4">
+                            {{ form.purpose|as_crispy_field }}
+                        </div>
+                        
+                        <!-- Project Specific -->
+                        <div class="mb-4" id="projectSection" style="display: none;">
+                            {{ form.project_name|as_crispy_field }}
+                        </div>
+                        
+                        <!-- Payment Method -->
+                        <div class="mb-4">
+                            <h6 class="fw-bold mb-3">Payment Method</h6>
+                            <div class="row">
+                                <div class="col-md-3 mb-3">
+                                    <div class="form-check card border">
+                                        <div class="card-body text-center">
+                                            <input type="radio" class="form-check-input" name="payment_method" value="bkash" id="bkash" checked>
+                                            <label class="form-check-label" for="bkash">
+                                                <img src="{% static 'images/bkash.png' %}" alt="bKash" height="30">
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-3 mb-3">
+                                    <div class="form-check card border">
+                                        <div class="card-body text-center">
+                                            <input type="radio" class="form-check-input" name="payment_method" value="nagad" id="nagad">
+                                            <label class="form-check-label" for="nagad">
+                                                <img src="{% static 'images/nagad.png' %}" alt="Nagad" height="30">
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-3 mb-3">
+                                    <div class="form-check card border">
+                                        <div class="card-body text-center">
+                                            <input type="radio" class="form-check-input" name="payment_method" value="rocket" id="rocket">
+                                            <label class="form-check-label" for="rocket">
+                                                <img src="{% static 'images/rocket.png' %}" alt="Rocket" height="30">
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-3 mb-3">
+                                    <div class="form-check card border">
+                                        <div class="card-body text-center">
+                                            <input type="radio" class="form-check-input" name="payment_method" value="bank" id="bank">
+                                            <label class="form-check-label" for="bank">
+                                                <i class="fas fa-university fa-2x text-primary"></i>
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            {{ form.payment_method.as_hidden }}
+                        </div>
+                        
+                        <!-- Privacy Options -->
+                        <div class="row mb-4">
+                            <div class="col-md-6">
+                                {{ form.is_anonymous|as_crispy_field }}
+                            </div>
+                            <div class="col-md-6">
+                                {{ form.agree_to_terms|as_crispy_field }}
+                            </div>
+                        </div>
+                        
+                        <!-- Message -->
+                        <div class="mb-4">
+                            {{ form.acknowledgement_message|as_crispy_field }}
+                        </div>
+                        
+                        <!-- Submit Button -->
+                        <div class="d-grid">
+                            <button type="submit" class="btn btn-primary btn-lg py-3">
+                                <i class="fas fa-hand-holding-heart me-2"></i>Donate Now
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            
+            <!-- Payment Instructions -->
+            <div class="card border-0 shadow-sm">
+                <div class="card-body p-4">
+                    <h4 class="fw-bold mb-4">
+                        <i class="fas fa-info-circle text-primary me-2"></i>Payment Instructions
+                    </h4>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-4">
+                            <h6 class="fw-bold mb-3">bKash / Nagad / Rocket</h6>
+                            <ol class="ps-3">
+                                <li class="mb-2">Go to your mobile banking app</li>
+                                <li class="mb-2">Send money to: <strong>01740433580</strong></li>
+                                <li class="mb-2">Use reference: <strong>DONATION</strong></li>
+                                <li>Save transaction ID for verification</li>
+                            </ol>
+                        </div>
+                        <div class="col-md-6 mb-4">
+                            <h6 class="fw-bold mb-3">Bank Transfer</h6>
+                            <ul class="list-unstyled">
+                                <li class="mb-2"><strong>Bank:</strong> Islami Bank Bangladesh Ltd.</li>
+                                <li class="mb-2"><strong>Account Name:</strong> Taw Haa Zin Nurain Online Madarasa</li>
+                                <li class="mb-2"><strong>Account Number:</strong> 1234567890</li>
+                                <li class="mb-2"><strong>Branch:</strong> Rangpur Main Branch</li>
+                                <li><strong>Routing Number:</strong> 125456789</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Sidebar -->
+        <div class="col-lg-4">
+            <!-- Donation Stats -->
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-body">
+                    <h4 class="fw-bold mb-4 text-center">Impact of Your Donation</h4>
+                    
+                    <div class="text-center mb-4">
+                        <h1 class="display-4 fw-bold text-primary">
+                            ৳{{ donation_stats.total_amount|floatformat:0 }}
+                        </h1>
+                        <p class="text-muted">Total Donations Collected</p>
+                    </div>
+                    
+                    <div class="row text-center">
+                        <div class="col-6 mb-3">
+                            <h3 class="fw-bold text-success">{{ donation_stats.total_donations }}</h3>
+                            <small class="text-muted">Total Donors</small>
+                        </div>
+                        <div class="col-6 mb-3">
+                            <h3 class="fw-bold text-warning">৳{{ donation_stats.zakat_collected|floatformat:0 }}</h3>
+                            <small class="text-muted">Zakat Collected</small>
+                        </div>
+                    </div>
+                    
+                    <div class="progress mb-3" style="height: 8px;">
+                        <div class="progress-bar bg-success" style="width: 75%"></div>
+                    </div>
+                    <small class="text-muted">75% towards annual goal</small>
+                </div>
+            </div>
+            
+            <!-- Where Your Money Goes -->
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-body">
+                    <h5 class="fw-bold mb-3">Where Your Money Goes</h5>
+                    <div class="mb-3">
+                        <div class="d-flex justify-content-between mb-2">
+                            <span>Scholarship for Students</span>
+                            <strong>40%</strong>
+                        </div>
+                        <div class="progress" style="height: 6px;">
+                            <div class="progress-bar bg-primary" style="width: 40%"></div>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <div class="d-flex justify-content-between mb-2">
+                            <span>Teacher Salaries</span>
+                            <strong>30%</strong>
+                        </div>
+                        <div class="progress" style="height: 6px;">
+                            <div class="progress-bar bg-success" style="width: 30%"></div>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <div class="d-flex justify-content-between mb-2">
+                            <span>Infrastructure</span>
+                            <strong>20%</strong>
+                        </div>
+                        <div class="progress" style="height: 6px;">
+                            <div class="progress-bar bg-warning" style="width: 20%"></div>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <div class="d-flex justify-content-between mb-2">
+                            <span>Administrative</span>
+                            <strong>10%</strong>
+                        </div>
+                        <div class="progress" style="height: 6px;">
+                            <div class="progress-bar bg-info" style="width: 10%"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Quick Donation Amounts -->
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-body">
+                    <h5 class="fw-bold mb-3">Quick Donation Amounts</h5>
+                    <div class="row g-2">
+                        <div class="col-4">
+                            <button class="btn btn-outline-primary w-100 amount-btn" data-amount="100">
+                                ৳100
+                            </button>
+                        </div>
+                        <div class="col-4">
+                            <button class="btn btn-outline-primary w-100 amount-btn" data-amount="500">
+                                ৳500
+                            </button>
+                        </div>
+                        <div class="col-4">
+                            <button class="btn btn-outline-primary w-100 amount-btn" data-amount="1000">
+                                ৳1000
+                            </button>
+                        </div>
+                        <div class="col-4">
+                            <button class="btn btn-outline-primary w-100 amount-btn" data-amount="2500">
+                                ৳2500
+                            </button>
+                        </div>
+                        <div class="col-4">
+                            <button class="btn btn-outline-primary w-100 amount-btn" data-amount="5000">
+                                ৳5000
+                            </button>
+                        </div>
+                        <div class="col-4">
+                            <button class="btn btn-outline-primary w-100 amount-btn" data-amount="10000">
+                                ৳10,000
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Donation Benefits -->
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <h5 class="fw-bold mb-3">Benefits of Donating</h5>
+                    <ul class="list-unstyled">
+                        <li class="mb-3">
+                            <i class="fas fa-check-circle text-success me-2"></i>
+                            <strong>Purification of Wealth</strong>
+                        </li>
+                        <li class="mb-3">
+                            <i class="fas fa-check-circle text-success me-2"></i>
+                            <strong>Continuous Reward (Sadaqah Jariyah)</strong>
+                        </li>
+                        <li class="mb-3">
+                            <i class="fas fa-check-circle text-success me-2"></i>
+                            <strong>Tax Deductible Receipt</strong>
+                        </li>
+                        <li class="mb-3">
+                            <i class="fas fa-check-circle text-success me-2"></i>
+                            <strong>Regular Progress Reports</strong>
+                        </li>
+                        <li>
+                            <i class="fas fa-check-circle text-success me-2"></i>
+                            <strong>Personalized Thank You Note</strong>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .form-check .card {
+        transition: all 0.3s ease;
+        cursor: pointer;
+    }
+    
+    .form-check .card:hover {
+        border-color: #1a5fb4;
+        transform: translateY(-2px);
+    }
+    
+    .form-check-input:checked + .card {
+        border-color: #1a5fb4;
+        background-color: rgba(26, 95, 180, 0.05);
+    }
+    
+    .amount-btn {
+        transition: all 0.3s ease;
+    }
+    
+    .amount-btn:hover,
+    .amount-btn.active {
+        background-color: #1a5fb4;
+        color: white;
+        border-color: #1a5fb4;
+    }
+    
+    .progress {
+        border-radius: 10px;
+    }
+    
+    .progress-bar {
+        border-radius: 10px;
+    }
+    
+    @media (max-width: 768px) {
+        .form-check .card-body {
+            padding: 15px 10px;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    $(document).ready(function() {
+        // Quick amount buttons
+        $('.amount-btn').click(function() {
+            $('.amount-btn').removeClass('active');
+            $(this).addClass('active');
+            var amount = $(this).data('amount');
+            $('#id_amount').val(amount);
+        });
+        
+        // Show/hide project section
+        $('#id_is_project_specific').change(function() {
+            if ($(this).is(':checked')) {
+                $('#projectSection').slideDown();
+            } else {
+                $('#projectSection').slideUp();
+            }
+        });
+        
+        // Update payment method hidden field
+        $('input[name="payment_method"]').change(function() {
+            $('#id_payment_method').val($(this).val());
+        });
+        
+        // Initialize payment method
+        $('input[name="payment_method"]:first').prop('checked', true);
+        $('#id_payment_method').val('bkash');
+        
+        // Phone number formatting
+        $('#id_donor_phone').on('input', function() {
+            var value = $(this).val().replace(/\D/g, '');
+            if (value.length > 0) {
+                if (!value.startsWith('880')) {
+                    value = '880' + value;
+                }
+                $(this).val(value);
+            }
+        });
+        
+        // Form validation
+        $('#donationForm').submit(function(e) {
+            var amount = parseFloat($('#id_amount').val());
+            if (amount < 100) {
+                alert('Minimum donation amount is ৳100');
+                e.preventDefault();
+                return false;
+            }
+            
+            if (!$('#id_agree_to_terms').is(':checked')) {
+                alert('You must agree to the terms and conditions');
+                e.preventDefault();
+                return false;
+            }
+            
+            // Show loading state
+            $('button[type="submit"]').html('<i class="fas fa-spinner fa-spin me-2"></i>Processing...');
+            $('button[type="submit"]').prop('disabled', true);
+        });
+        
+        // Animate donation stats
+        function animateStats() {
+            $('.display-4').each(function() {
+                var $this = $(this);
+                var countTo = $this.text().replace('৳', '').replace(/,/g, '');
+                
+                $({ countNum: 0 }).animate({
+                    countNum: parseFloat(countTo)
+                }, {
+                    duration: 2000,
+                    easing: 'swing',
+                    step: function() {
+                        $this.text('৳' + Math.floor(this.countNum).toLocaleString());
+                    }
+                });
+            });
+        }
+        
+        setTimeout(animateStats, 1000);
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,429 @@
+{% extends 'base.html' %}
+{% load crispy_forms_tags %}
+{% load static %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <!-- Sidebar (same as overview.html) -->
+        <nav id="sidebar" class="col-md-3 col-lg-2 d-md-block bg-light sidebar collapse">
+            <!-- ... same sidebar as overview.html ... -->
+        </nav>
+        
+        <!-- Main Content -->
+        <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4">
+            <!-- Header -->
+            <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+                <h1 class="h2 fw-bold">Make Payment</h1>
+                <div class="btn-toolbar mb-2 mb-md-0">
+                    <a href="{% url 'core:payment_history' %}" class="btn btn-sm btn-outline-primary">
+                        <i class="fas fa-arrow-left me-2"></i>Back to Payments
+                    </a>
+                </div>
+            </div>
+            
+            <div class="row">
+                <!-- Payment Form -->
+                <div class="col-lg-8">
+                    <div class="card shadow-sm mb-4">
+                        <div class="card-body p-4">
+                            <!-- Course Information -->
+                            <div class="alert alert-primary mb-4">
+                                <div class="d-flex align-items-center">
+                                    <i class="fas fa-book fa-2x me-3"></i>
+                                    <div>
+                                        <h5 class="fw-bold mb-1">{{ enrollment.course.name }}</h5>
+                                        <p class="mb-0">{{ enrollment.course.get_category_display }}</p>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Payment Summary -->
+                            <div class="row mb-4">
+                                <div class="col-md-6">
+                                    <div class="card border">
+                                        <div class="card-body">
+                                            <h6 class="fw-bold mb-3">Payment Summary</h6>
+                                            <div class="d-flex justify-content-between mb-2">
+                                                <span class="text-muted">Course Fee:</span>
+                                                <span class="fw-bold">৳{{ enrollment.course_fee|floatformat:0|intcomma }}</span>
+                                            </div>
+                                            <div class="d-flex justify-content-between mb-2">
+                                                <span class="text-muted">Discount Applied:</span>
+                                                <span class="fw-bold text-success">-৳{{ enrollment.discount_applied|floatformat:0|intcomma }}</span>
+                                            </div>
+                                            <div class="d-flex justify-content-between mb-2">
+                                                <span class="text-muted">Already Paid:</span>
+                                                <span class="fw-bold text-primary">৳{{ enrollment.total_paid|floatformat:0|intcomma }}</span>
+                                            </div>
+                                            <hr>
+                                            <div class="d-flex justify-content-between">
+                                                <span class="fw-bold">Due Amount:</span>
+                                                <span class="fw-bold text-danger h5">৳{{ enrollment.due_amount|floatformat:0|intcomma }}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="card border">
+                                        <div class="card-body">
+                                            <h6 class="fw-bold mb-3">Payment Status</h6>
+                                            <div class="mb-3">
+                                                <span class="badge bg-{{ enrollment.payment_status }} p-2 w-100">
+                                                    {{ enrollment.get_payment_status_display }}
+                                                </span>
+                                            </div>
+                                            {% if enrollment.is_installment %}
+                                            <div class="mb-3">
+                                                <small class="text-muted d-block">Installment Plan</small>
+                                                <strong>{{ enrollment.installment_count }} payments</strong>
+                                            </div>
+                                            {% if enrollment.next_installment_date %}
+                                            <div class="mb-3">
+                                                <small class="text-muted d-block">Next Due Date</small>
+                                                <strong>{{ enrollment.next_installment_date|date:"d M, Y" }}</strong>
+                                            </div>
+                                            {% endif %}
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Payment Form -->
+                            <form method="POST" id="paymentForm">
+                                {% csrf_token %}
+                                
+                                <h5 class="fw-bold mb-4">
+                                    <i class="fas fa-credit-card me-2"></i>Payment Details
+                                </h5>
+                                
+                                <!-- Amount -->
+                                <div class="mb-4">
+                                    <label class="form-label fw-bold">Payment Amount</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text">৳</span>
+                                        {{ form.amount }}
+                                    </div>
+                                    <small class="form-text text-muted">
+                                        Due amount: ৳{{ enrollment.due_amount|floatformat:0|intcomma }}
+                                    </small>
+                                </div>
+                                
+                                <!-- Payment Method -->
+                                <div class="mb-4">
+                                    <label class="form-label fw-bold mb-3">Select Payment Method</label>
+                                    <div class="row">
+                                        <div class="col-md-3 col-6 mb-3">
+                                            <div class="form-check card border payment-method" data-method="bkash">
+                                                <div class="card-body text-center p-3">
+                                                    <input type="radio" class="form-check-input" 
+                                                           name="payment_method" value="bkash" id="bkash" checked>
+                                                    <img src="{% static 'images/bkash.png' %}" alt="bKash" height="30" class="mb-2">
+                                                    <label class="form-check-label" for="bkash">bKash</label>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-3 col-6 mb-3">
+                                            <div class="form-check card border payment-method" data-method="nagad">
+                                                <div class="card-body text-center p-3">
+                                                    <input type="radio" class="form-check-input" 
+                                                           name="payment_method" value="nagad" id="nagad">
+                                                    <img src="{% static 'images/nagad.png' %}" alt="Nagad" height="30" class="mb-2">
+                                                    <label class="form-check-label" for="nagad">Nagad</label>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-3 col-6 mb-3">
+                                            <div class="form-check card border payment-method" data-method="rocket">
+                                                <div class="card-body text-center p-3">
+                                                    <input type="radio" class="form-check-input" 
+                                                           name="payment_method" value="rocket" id="rocket">
+                                                    <img src="{% static 'images/rocket.png' %}" alt="Rocket" height="30" class="mb-2">
+                                                    <label class="form-check-label" for="rocket">Rocket</label>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-3 col-6 mb-3">
+                                            <div class="form-check card border payment-method" data-method="bank">
+                                                <div class="card-body text-center p-3">
+                                                    <input type="radio" class="form-check-input" 
+                                                           name="payment_method" value="bank" id="bank">
+                                                    <i class="fas fa-university fa-2x text-primary mb-2"></i>
+                                                    <label class="form-check-label" for="bank">Bank</label>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    {{ form.payment_method.as_hidden }}
+                                </div>
+                                
+                                <!-- Transaction Details -->
+                                <div class="mb-4">
+                                    {{ form.transaction_id|as_crispy_field }}
+                                </div>
+                                
+                                <!-- Reference Number (for bank) -->
+                                <div class="mb-4" id="referenceSection" style="display: none;">
+                                    {{ form.reference_number|as_crispy_field }}
+                                </div>
+                                
+                                <!-- Notes -->
+                                <div class="mb-4">
+                                    {{ form.notes|as_crispy_field }}
+                                </div>
+                                
+                                <!-- Terms -->
+                                <div class="mb-4">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="confirmPayment" required>
+                                        <label class="form-check-label" for="confirmPayment">
+                                            I confirm that I have made the payment using the selected method and the transaction details are correct.
+                                        </label>
+                                    </div>
+                                </div>
+                                
+                                <!-- Submit Button -->
+                                <div class="d-grid">
+                                    <button type="submit" class="btn btn-primary btn-lg py-3">
+                                        <i class="fas fa-paper-plane me-2"></i>Submit Payment
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Sidebar -->
+                <div class="col-lg-4">
+                    <!-- Payment Instructions -->
+                    <div class="card shadow-sm mb-4">
+                        <div class="card-body">
+                            <h5 class="fw-bold mb-4">
+                                <i class="fas fa-info-circle text-primary me-2"></i>Payment Instructions
+                            </h5>
+                            
+                            <div class="payment-instructions">
+                                <!-- bKash Instructions -->
+                                <div class="instruction active" id="bkashInstructions">
+                                    <h6 class="fw-bold mb-3">bKash Payment Steps:</h6>
+                                    <ol class="ps-3">
+                                        <li class="mb-2">Go to your bKash mobile menu</li>
+                                        <li class="mb-2">Select "Send Money"</li>
+                                        <li class="mb-2">Enter number: <strong>01740433580</strong></li>
+                                        <li class="mb-2">Enter amount: <strong id="bkashAmount">৳{{ enrollment.due_amount|floatformat:0|intcomma }}</strong></li>
+                                        <li class="mb-2">Enter reference: <strong>COURSE-{{ enrollment.course.id|slice:":8" }}</strong></li>
+                                        <li>Enter your bKash PIN</li>
+                                    </ol>
+                                </div>
+                                
+                                <!-- Nagad Instructions -->
+                                <div class="instruction" id="nagadInstructions" style="display: none;">
+                                    <h6 class="fw-bold mb-3">Nagad Payment Steps:</h6>
+                                    <ol class="ps-3">
+                                        <li class="mb-2">Go to your Nagad mobile menu</li>
+                                        <li class="mb-2">Select "Send Money"</li>
+                                        <li class="mb-2">Enter number: <strong>01740433580</strong></li>
+                                        <li class="mb-2">Enter amount: <strong id="nagadAmount">৳{{ enrollment.due_amount|floatformat:0|intcomma }}</strong></li>
+                                        <li class="mb-2">Enter reference: <strong>COURSE-{{ enrollment.course.id|slice:":8" }}</strong></li>
+                                        <li>Enter your Nagad PIN</li>
+                                    </ol>
+                                </div>
+                                
+                                <!-- Rocket Instructions -->
+                                <div class="instruction" id="rocketInstructions" style="display: none;">
+                                    <h6 class="fw-bold mb-3">Rocket Payment Steps:</h6>
+                                    <ol class="ps-3">
+                                        <li class="mb-2">Go to your Rocket mobile menu</li>
+                                        <li class="mb-2">Select "Send Money"</li>
+                                        <li class="mb-2">Enter number: <strong>01740433580</strong></li>
+                                        <li class="mb-2">Enter amount: <strong id="rocketAmount">৳{{ enrollment.due_amount|floatformat:0|intcomma }}</strong></li>
+                                        <li class="mb-2">Enter reference: <strong>COURSE-{{ enrollment.course.id|slice:":8" }}</strong></li>
+                                        <li>Enter your Rocket PIN</li>
+                                    </ol>
+                                </div>
+                                
+                                <!-- Bank Instructions -->
+                                <div class="instruction" id="bankInstructions" style="display: none;">
+                                    <h6 class="fw-bold mb-3">Bank Transfer Details:</h6>
+                                    <ul class="list-unstyled">
+                                        <li class="mb-2"><strong>Bank:</strong> Islami Bank Bangladesh Ltd.</li>
+                                        <li class="mb-2"><strong>Account Name:</strong> Taw Haa Zin Nurain Online Madarasa</li>
+                                        <li class="mb-2"><strong>Account Number:</strong> 1234567890</li>
+                                        <li class="mb-2"><strong>Branch:</strong> Rangpur Main Branch</li>
+                                        <li class="mb-2"><strong>Routing Number:</strong> 125456789</li>
+                                        <li class="mb-2"><strong>Amount:</strong> <span id="bankAmount">৳{{ enrollment.due_amount|floatformat:0|intcomma }}</span></li>
+                                        <li><strong>Reference:</strong> COURSE-{{ enrollment.course.id|slice:":8" }}</li>
+                                    </ul>
+                                </div>
+                            </div>
+                            
+                            <div class="alert alert-warning mt-4">
+                                <i class="fas fa-exclamation-triangle me-2"></i>
+                                <strong>Important:</strong> Save your transaction ID for future reference.
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Contact Support -->
+                    <div class="card shadow-sm">
+                        <div class="card-body">
+                            <h5 class="fw-bold mb-4">
+                                <i class="fas fa-headset text-primary me-2"></i>Need Help?
+                            </h5>
+                            <p class="text-muted small mb-3">
+                                If you face any issues with payment, contact our support team.
+                            </p>
+                            <div class="d-grid gap-2">
+                                <a href="tel:+8801740433580" class="btn btn-outline-primary">
+                                    <i class="fas fa-phone me-2"></i>Call: +8801740433580
+                                </a>
+                                <a href="mailto:support@tawhaa.edu.bd" class="btn btn-outline-primary">
+                                    <i class="fas fa-envelope me-2"></i>Email Support
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .payment-method {
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+    
+    .payment-method:hover {
+        border-color: #1a5fb4;
+        transform: translateY(-2px);
+    }
+    
+    .form-check-input:checked + .card {
+        border-color: #1a5fb4;
+        background-color: rgba(26, 95, 180, 0.05);
+    }
+    
+    .instruction {
+        display: none;
+    }
+    
+    .instruction.active {
+        display: block;
+    }
+    
+    .badge.bg-pending {
+        background-color: #ffc107;
+        color: #000;
+    }
+    
+    .badge.bg-partial {
+        background-color: #fd7e14;
+        color: #000;
+    }
+    
+    .badge.bg-paid {
+        background-color: #28a745;
+        color: #fff;
+    }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    $(document).ready(function() {
+        // Payment method selection
+        $('.payment-method').click(function() {
+            var method = $(this).data('method');
+            
+            // Update hidden field
+            $('#id_payment_method').val(method);
+            
+            // Update instructions
+            $('.instruction').removeClass('active').hide();
+            $('#' + method + 'Instructions').addClass('active').show();
+            
+            // Show/hide reference section
+            if (method === 'bank') {
+                $('#referenceSection').slideDown();
+            } else {
+                $('#referenceSection').slideUp();
+            }
+        });
+        
+        // Update amount in instructions
+        function updateAmountInInstructions() {
+            var amount = $('#id_amount').val();
+            $('#bkashAmount, #nagadAmount, #rocketAmount, #bankAmount').text('৳' + amount);
+        }
+        
+        $('#id_amount').on('input', function() {
+            updateAmountInInstructions();
+            
+            // Validate amount
+            var dueAmount = {{ enrollment.due_amount }};
+            var enteredAmount = parseFloat($(this).val());
+            
+            if (enteredAmount > dueAmount) {
+                $(this).addClass('is-invalid');
+                $('.amount-error').remove();
+                $(this).after('<div class="amount-error invalid-feedback">Amount cannot exceed due amount of ৳' + dueAmount + '</div>');
+            } else {
+                $(this).removeClass('is-invalid');
+                $('.amount-error').remove();
+            }
+        });
+        
+        // Form validation
+        $('#paymentForm').submit(function(e) {
+            var amount = parseFloat($('#id_amount').val());
+            var dueAmount = {{ enrollment.due_amount }};
+            var method = $('#id_payment_method').val();
+            var transactionId = $('#id_transaction_id').val();
+            
+            if (!amount || amount <= 0) {
+                alert('Please enter a valid amount');
+                e.preventDefault();
+                return false;
+            }
+            
+            if (amount > dueAmount) {
+                alert('Amount cannot exceed due amount of ৳' + dueAmount);
+                e.preventDefault();
+                return false;
+            }
+            
+            if (!method) {
+                alert('Please select a payment method');
+                e.preventDefault();
+                return false;
+            }
+            
+            if (!transactionId) {
+                alert('Please enter your transaction ID');
+                e.preventDefault();
+                return false;
+            }
+            
+            if (!$('#confirmPayment').is(':checked')) {
+                alert('Please confirm that you have made the payment');
+                e.preventDefault();
+                return false;
+            }
+            
+            // Show loading state
+            $('button[type="submit"]').html('<i class="fas fa-spinner fa-spin me-2"></i>Processing...');
+            $('button[type="submit"]').prop('disabled', true);
+        });
+        
+        // Initialize
+        updateAmountInInstructions();
+    });
+</script>
+{% endblock %}

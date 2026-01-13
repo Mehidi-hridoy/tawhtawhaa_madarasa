@@ -1,0 +1,160 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card border-0 shadow-sm text-center">
+                <div class="card-body p-5">
+                    <!-- Success Icon -->
+                    <div class="mb-4">
+                        <div class="success-icon mx-auto">
+                            <i class="fas fa-check-circle"></i>
+                        </div>
+                    </div>
+                    
+                    <!-- Success Message -->
+                    <h1 class="display-6 fw-bold text-success mb-4">Donation Successful!</h1>
+                    <p class="lead text-muted mb-5">
+                        Assalamu Alaikum <strong>{{ donation.donor_name }}</strong>,<br>
+                        Thank you for your generous donation to Taw Haa Zin Nurain Online Madarasa.
+                    </p>
+                    
+                    <!-- Donation Details -->
+                    <div class="card border mb-5">
+                        <div class="card-body">
+                            <h5 class="fw-bold mb-4">Donation Summary</h5>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="mb-4">
+                                        <h6 class="text-muted mb-2">Transaction ID</h6>
+                                        <h4 class="fw-bold text-primary">{{ donation.transaction_id }}</h4>
+                                    </div>
+                                    <div class="mb-4">
+                                        <h6 class="text-muted mb-2">Donation Date</h6>
+                                        <p class="fw-bold">{{ donation.donated_at|date:"F d, Y - h:i A" }}</p>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-4">
+                                        <h6 class="text-muted mb-2">Donation Amount</h6>
+                                        <h2 class="fw-bold text-success">৳{{ donation.amount }}</h2>
+                                    </div>
+                                    <div class="mb-4">
+                                        <h6 class="text-muted mb-2">Payment Method</h6>
+                                        <p class="fw-bold">{{ donation.get_payment_method_display }}</p>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            {% if donation.purpose %}
+                            <div class="alert alert-info">
+                                <h6 class="fw-bold mb-2">Purpose:</h6>
+                                <p class="mb-0">{{ donation.purpose }}</p>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <!-- Next Steps -->
+                    <div class="row mb-5">
+                        <div class="col-md-4 mb-4">
+                            <div class="p-3">
+                                <div class="icon-wrapper bg-primary bg-opacity-10 rounded-circle p-3 mb-3 mx-auto">
+                                    <i class="fas fa-envelope fa-2x text-primary"></i>
+                                </div>
+                                <h6 class="fw-bold mb-2">Email Confirmation</h6>
+                                <p class="text-muted small mb-0">Check your email for receipt</p>
+                            </div>
+                        </div>
+                        <div class="col-md-4 mb-4">
+                            <div class="p-3">
+                                <div class="icon-wrapper bg-success bg-opacity-10 rounded-circle p-3 mb-3 mx-auto">
+                                    <i class="fas fa-receipt fa-2x text-success"></i>
+                                </div>
+                                <h6 class="fw-bold mb-2">Tax Receipt</h6>
+                                <p class="text-muted small mb-0">Will be sent within 7 days</p>
+                            </div>
+                        </div>
+                        <div class="col-md-4 mb-4">
+                            <div class="p-3">
+                                <div class="icon-wrapper bg-warning bg-opacity-10 rounded-circle p-3 mb-3 mx-auto">
+                                    <i class="fas fa-chart-line fa-2x text-warning"></i>
+                                </div>
+                                <h6 class="fw-bold mb-2">Impact Report</h6>
+                                <p class="text-muted small mb-0">Receive quarterly updates</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Islamic Quote -->
+                    <div class="alert alert-light border mb-5">
+                        <div class="d-flex">
+                            <i class="fas fa-quote-left fa-2x text-primary me-3"></i>
+                            <div>
+                                <p class="mb-0 fst-italic">
+                                    "The example of those who spend their wealth in the Way of Allah is like that of a grain which grows seven spikes; in each spike there are a hundred grains. Thus Allah multiplies the action of whomsoever He wills. Allah is Munificent, All-Knowing."
+                                </p>
+                                <p class="text-end text-muted mt-2">- Quran (2:261)</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Action Buttons -->
+                    <div class="d-flex flex-wrap gap-3 justify-content-center">
+                        <a href="{% url 'core:home' %}" class="btn btn-primary">
+                            <i class="fas fa-home me-2"></i>Back to Home
+                        </a>
+                        <a href="{% url 'core:courses' %}" class="btn btn-outline-primary">
+                            <i class="fas fa-book me-2"></i>Explore Courses
+                        </a>
+                        <button class="btn btn-outline-success" onclick="window.print()">
+                            <i class="fas fa-print me-2"></i>Print Receipt
+                        </button>
+                    </div>
+                    
+                    <!-- Contact Information -->
+                    <div class="mt-5 pt-4 border-top">
+                        <h6 class="fw-bold mb-3">Need Help?</h6>
+                        <p class="text-muted mb-0">
+                            Contact us at <strong>donations@tawhaa.edu.bd</strong> or call <strong>+8801740433580</strong>
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .success-icon {
+        width: 100px;
+        height: 100px;
+        background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    
+    .success-icon i {
+        font-size: 50px;
+        color: white;
+    }
+    
+    @media print {
+        .btn {
+            display: none !important;
+        }
+        
+        .alert-light {
+            border: 1px solid #dee2e6 !important;
+        }
+    }
+</style>
+{% endblock %}

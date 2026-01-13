@@ -1,0 +1,47 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Bad Request - Taw Haa Zin Nurain Online Madarasa{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8 text-center">
+            <div class="error-container">
+                <h1 class="display-1 text-info mb-4">400</h1>
+                <h2 class="h1 mb-3">Bad Request</h2>
+                <p class="lead text-muted mb-5">
+                    The server cannot process your request due to invalid syntax or 
+                    malformed request. Please check your input and try again.
+                </p>
+                
+                <div class="alert alert-info mb-4">
+                    <i class="fas fa-lightbulb me-2"></i>
+                    Try clearing your browser cache or checking the URL for errors.
+                </div>
+                
+                <div class="d-flex justify-content-center gap-3 flex-wrap">
+                    <a href="{% url 'home' %}" class="btn btn-primary btn-lg">
+                        <i class="fas fa-home me-2"></i>Go to Homepage
+                    </a>
+                    <a href="#" onclick="history.back()" class="btn btn-outline-primary btn-lg">
+                        <i class="fas fa-arrow-left me-2"></i>Go Back
+                    </a>
+                    <a href="{% url 'contact' %}" class="btn btn-outline-info btn-lg">
+                        <i class="fas fa-headset me-2"></i>Get Help
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.error-container {
+    padding: 3rem;
+    background: #fff;
+    border-radius: 15px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+}
+</style>
+{% endblock %}

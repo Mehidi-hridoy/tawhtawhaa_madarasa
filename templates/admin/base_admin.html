@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Admin Panel - Taw Haa Zin Nurain{% endblock %}</title>
+    
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Custom Admin CSS -->
+    <link href="{% static 'css/admin.css' %}" rel="stylesheet">
+    
+    {% block extra_css %}{% endblock %}
+</head>
+<body class="admin-body">
+    <!-- Admin Sidebar -->
+    <nav class="admin-sidebar">
+        <div class="sidebar-header">
+            <a href="{% url 'admin_dashboard' %}" class="navbar-brand">
+                <i class="fas fa-graduation-cap me-2"></i>
+                <span class="fw-bold">Admin Panel</span>
+            </a>
+        </div>
+        
+        <ul class="sidebar-menu">
+            <li class="menu-header">MAIN NAVIGATION</li>
+            <li>
+                <a href="{% url 'admin_dashboard' %}">
+                    <i class="fas fa-tachometer-alt"></i> Dashboard
+                </a>
+            </li>
+            <li>
+                <a href="{% url 'contact_messages' %}">
+                    <i class="fas fa-inbox"></i> Contact Messages
+                    {% if unread_messages_count > 0 %}
+                    <span class="badge bg-danger float-end">{{ unread_messages_count }}</span>
+                    {% endif %}
+                </a>
+            </li>
+            <li class="menu-header">MANAGEMENT</li>
+            <li>
+                <a href="#">
+                    <i class="fas fa-users"></i> Users
+                </a>
+            </li>
+            <li>
+                <a href="#">
+                    <i class="fas fa-book"></i> Courses
+                </a>
+            </li>
+            <li>
+                <a href="#">
+                    <i class="fas fa-chalkboard-teacher"></i> Instructors
+                </a>
+            </li>
+        </ul>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="admin-main">
+        <!-- Top Navigation -->
+        <nav class="admin-topbar">
+            <div class="container-fluid">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <button class="sidebar-toggle btn btn-link">
+                            <i class="fas fa-bars"></i>
+                        </button>
+                    </div>
+                    
+                    <div class="d-flex align-items-center gap-3">
+                        <div class="dropdown">
+                            <button class="btn btn-link text-dark dropdown-toggle" data-bs-toggle="dropdown">
+                                <i class="fas fa-user-circle fa-lg"></i>
+                                {{ request.user.get_full_name }}
+                            </button>
+                            <ul class="dropdown-menu dropdown-menu-end">
+                                <li><a class="dropdown-item" href="#"><i class="fas fa-user me-2"></i>Profile</a></li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li><a class="dropdown-item" href="{% url 'logout' %}"><i class="fas fa-sign-out-alt me-2"></i>Logout</a></li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </nav>
+
+        <!-- Messages Display -->
+        {% if messages %}
+        <div class="container-fluid mt-3">
+            {% for message in messages %}
+            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        <!-- Page Content -->
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- Bootstrap JS Bundle with Popper -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- Custom Admin JS -->
+    <script src="{% static 'js/admin.js' %}"></script>
+    
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

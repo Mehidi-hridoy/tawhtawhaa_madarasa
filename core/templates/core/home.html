@@ -1,0 +1,815 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<!-- Hero Section -->
+<section class="hero-section position-relative overflow-hidden">
+    <div class="container position-relative z-1">
+        <div class="row align-items-center min-vh-80">
+            <div class="col-lg-6">
+                <div class="mb-4">
+                    <span class="badge bg-light text-dark mb-3 px-3 py-2 rounded-pill">
+                        <i class="fas fa-star me-1 text-warning"></i> Authentic Islamic Education
+                    </span>
+                    <h1 class="display-4 fw-bold mb-4">
+                        <span class="arabic-font text-primary">Taw Haa</span>
+                        <span class="arabic-font text-success">Zin Nurain</span>
+                        <br>
+                        <span class="h3">Online Madarasa</span>
+                    </h1>
+                    <p class="lead mb-4">
+                        An enlightened generation is our commitment. Learn authentic Quran recitation, 
+                        Tadabbur, and Islamic studies from renowned Bangladeshi scholars.
+                    </p>
+                    <div class="d-flex flex-wrap gap-3">
+                        <a href="{% url 'core:courses' %}" class="btn btn-primary btn-lg px-4 py-3">
+                            <i class="fas fa-book-open me-2"></i>Explore Courses
+                        </a>
+                        <a href="{% url 'core:register' %}" class="btn btn-outline-light btn-lg px-4 py-3">
+                            <i class="fas fa-user-plus me-2"></i>Join Now
+                        </a>
+                    </div>
+                </div>
+                <div class="row mt-5">
+                    <div class="col-md-4">
+                        <div class="text-center">
+                            <h3 class="fw-bold text-white">{{ stats.total_students|add:"+" }}</h3>
+                            <p class="text-light mb-0">Active Students</p>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="text-center">
+                            <h3 class="fw-bold text-white">{{ stats.active_courses }}</h3>
+                            <p class="text-light mb-0">Running Courses</p>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="text-center">
+                            <h3 class="fw-bold text-white">{{ stats.successful_completions }}</h3>
+                            <p class="text-light mb-0">Success Stories</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-6">
+                <div class="position-relative">
+                    <div class="floating-elements">
+                        <div class="floating-card floating-card-1 bg-white shadow-lg rounded-3 p-4">
+                            <div class="d-flex align-items-center mb-3">
+                                <div class="bg-primary rounded-circle p-3 me-3">
+                                    <i class="fas fa-quran text-white fa-lg"></i>
+                                </div>
+                                <h5 class="mb-0">Quran Recitation</h5>
+                            </div>
+                            <p class="text-muted small">Learn authentic Quran recitation with Tajweed rules</p>
+                        </div>
+                        <div class="floating-card floating-card-2 bg-white shadow-lg rounded-3 p-4">
+                            <div class="d-flex align-items-center mb-3">
+                                <div class="bg-success rounded-circle p-3 me-3">
+                                    <i class="fas fa-book text-white fa-lg"></i>
+                                </div>
+                                <h5 class="mb-0">Tadabbur Quran</h5>
+                            </div>
+                            <p class="text-muted small">Deep understanding of Quranic verses and meanings</p>
+                        </div>
+                        <div class="floating-card floating-card-3 bg-white shadow-lg rounded-3 p-4">
+                            <div class="d-flex align-items-center mb-3">
+                                <div class="bg-warning rounded-circle p-3 me-3">
+                                    <i class="fas fa-mosque text-white fa-lg"></i>
+                                </div>
+                                <h5 class="mb-0">Riratunnabi (SM)</h5>
+                            </div>
+                            <p class="text-muted small">Study the life and teachings of Prophet Muhammad (SM)</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- Decorative elements -->
+    <div class="hero-shape-1"></div>
+    <div class="hero-shape-2"></div>
+</section>
+
+<!-- Featured Courses -->
+<section class="py-5 bg-light">
+    <div class="container">
+        <div class="row mb-5">
+            <div class="col-md-8">
+                <h2 class="fw-bold mb-3">Featured Courses</h2>
+                <p class="text-muted">Learn from authentic sources with qualified Islamic scholars</p>
+            </div>
+            <div class="col-md-4 text-md-end">
+                <a href="{% url 'core:courses' %}" class="btn btn-outline-primary">View All Courses <i class="fas fa-arrow-right ms-2"></i></a>
+            </div>
+        </div>
+        
+        <div class="row g-4">
+            {% for course in featured_courses %}
+            <div class="col-md-6 col-lg-4">
+                <div class="course-card card h-100 border-0 shadow-sm">
+                    {% if course.thumbnail %}
+                    <img src="{{ course.thumbnail.url }}" class="card-img-top" alt="{{ course.name }}" style="height: 200px; object-fit: cover;">
+                    {% else %}
+                    <div class="card-img-top bg-secondary d-flex align-items-center justify-content-center" style="height: 200px;">
+                        <i class="fas fa-book fa-3x text-light"></i>
+                    </div>
+                    {% endif %}
+                    
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <span class="badge badge-{{ course.category }} py-2 px-3">
+                                {{ course.get_category_display }}
+                            </span>
+                            <span class="text-muted small">
+                                <i class="fas fa-users me-1"></i> {{ course.current_enrollment }}/{{ course.max_students }}
+                            </span>
+                        </div>
+                        
+                        <h5 class="card-title fw-bold mb-3">{{ course.name }}</h5>
+                        <p class="card-text text-muted small mb-4">{{ course.short_description|truncatewords:20 }}</p>
+                        
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <div>
+                                <h4 class="text-primary fw-bold mb-0">
+                                    {% if course.discount_fee %}
+                                    <span class="text-decoration-line-through text-muted small">৳{{ course.base_fee }}</span>
+                                    ৳{{ course.discount_fee }}
+                                    {% else %}
+                                    ৳{{ course.base_fee }}
+                                    {% endif %}
+                                </h4>
+                                <small class="text-muted">Course Fee</small>
+                            </div>
+                            <div class="text-end">
+                                <div class="text-warning small">
+                                    {% for i in "12345"|make_list %}
+                                    {% if forloop.counter <= course.level|default:3 %}
+                                    <i class="fas fa-star"></i>
+                                    {% else %}
+                                    <i class="far fa-star"></i>
+                                    {% endif %}
+                                    {% endfor %}
+                                </div>
+                                <small class="text-muted">{{ course.get_level_display }}</small>
+                            </div>
+                        </div>
+                        
+                        <div class="d-flex justify-content-between small text-muted mb-3">
+                            <span><i class="fas fa-clock me-1"></i> {{ course.duration_weeks }} weeks</span>
+                            <span><i class="fas fa-calendar-alt me-1"></i> {{ course.classes_per_week }}/week</span>
+                            <span><i class="fas fa-user-graduate me-1"></i> {{ course.min_age }}+ years</span>
+                        </div>
+                        
+                        <div class="d-grid">
+                            <a href="{% url 'core:course_detail' course.id %}" class="btn btn-outline-primary">
+                                View Details <i class="fas fa-arrow-right ms-2"></i>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% empty %}
+            <div class="col-12 text-center py-5">
+                <i class="fas fa-book fa-3x text-muted mb-3"></i>
+                <h4>No courses available at the moment</h4>
+                <p class="text-muted">Please check back later for upcoming courses</p>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</section>
+
+<!-- Why Choose Us -->
+<section class="py-5">
+    <div class="container">
+        <div class="row mb-5">
+            <div class="col-lg-8 mx-auto text-center">
+                <h2 class="fw-bold mb-3">Why Choose Our Madarasa?</h2>
+                <p class="lead text-muted">Experience authentic Islamic education with modern teaching methods</p>
+            </div>
+        </div>
+        
+        <div class="row g-4">
+            <div class="col-md-6 col-lg-3">
+                <div class="text-center p-4">
+                    <div class="icon-wrapper bg-primary bg-opacity-10 rounded-circle p-4 mb-4 mx-auto" style="width: 80px; height: 80px;">
+                        <i class="fas fa-user-tie fa-2x text-primary"></i>
+                    </div>
+                    <h5 class="fw-bold mb-3">Renowned Scholars</h5>
+                    <p class="text-muted mb-0">Learn directly from authentic Bangladeshi Islamic scholars with decades of experience.</p>
+                </div>
+            </div>
+            
+            <div class="col-md-6 col-lg-3">
+                <div class="text-center p-4">
+                    <div class="icon-wrapper bg-success bg-opacity-10 rounded-circle p-4 mb-4 mx-auto" style="width: 80px; height: 80px;">
+                        <i class="fas fa-laptop-house fa-2x text-success"></i>
+                    </div>
+                    <h5 class="fw-bold mb-3">Flexible Learning</h5>
+                    <p class="text-muted mb-0">Study from anywhere with multiple time slots. Recorded sessions available.</p>
+                </div>
+            </div>
+            
+            <div class="col-md-6 col-lg-3">
+                <div class="text-center p-4">
+                    <div class="icon-wrapper bg-warning bg-opacity-10 rounded-circle p-4 mb-4 mx-auto" style="width: 80px; height: 80px;">
+                        <i class="fas fa-handshake fa-2x text-warning"></i>
+                    </div>
+                    <h5 class="fw-bold mb-3">Personal Attention</h5>
+                    <p class="text-muted mb-0">Small class sizes with one-on-one attention and regular progress tracking.</p>
+                </div>
+            </div>
+            
+            <div class="col-md-6 col-lg-3">
+                <div class="text-center p-4">
+                    <div class="icon-wrapper bg-info bg-opacity-10 rounded-circle p-4 mb-4 mx-auto" style="width: 80px; height: 80px;">
+                        <i class="fas fa-certificate fa-2x text-info"></i>
+                    </div>
+                    <h5 class="fw-bold mb-3">Certification</h5>
+                    <p class="text-muted mb-0">Receive authenticated certificates upon course completion.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Featured Instructors -->
+<section class="py-5 bg-light">
+    <div class="container">
+        <div class="row mb-5">
+            <div class="col-md-8">
+                <h2 class="fw-bold mb-3">Meet Our Instructors</h2>
+                <p class="text-muted">Learn from the best Islamic scholars and teachers</p>
+            </div>
+            <div class="col-md-4 text-md-end">
+                <a href="{% url 'core:team' %}" class="btn btn-outline-primary">Meet All Instructors <i class="fas fa-arrow-right ms-2"></i></a>
+            </div>
+        </div>
+        
+        <div class="row g-4">
+            {% for instructor in featured_instructors %}
+            <div class="col-md-6 col-lg-3">
+                <div class="instructor-card card border-0 shadow-sm h-100">
+                    <div class="card-body text-center p-4">
+                        {% if instructor.profile_picture %}
+                        <img src="{{ instructor.profile_picture.url }}" 
+                             class="instructor-img mb-3" 
+                             alt="{{ instructor.full_name }}">
+                        {% else %}
+                        <div class="instructor-img mb-3 mx-auto bg-secondary d-flex align-items-center justify-content-center">
+                            <span class="display-4 text-light">{{ instructor.full_name|first|upper }}</span>
+                        </div>
+                        {% endif %}
+                        
+                        <h5 class="fw-bold mb-2">{{ instructor.full_name }}</h5>
+                        <p class="text-primary small mb-3">{{ instructor.title }}</p>
+                        
+                        <p class="text-muted small mb-4">{{ instructor.bio|truncatewords:15 }}</p>
+                        
+                        <div class="specialization mb-3">
+                            <span class="badge bg-light text-dark">{{ instructor.specialization }}</span>
+                        </div>
+                        
+                        <div class="social-icons">
+                            {% if instructor.facebook %}
+                            <a href="{{ instructor.facebook }}" class="text-muted me-2"><i class="fab fa-facebook"></i></a>
+                            {% endif %}
+                            {% if instructor.twitter %}
+                            <a href="{{ instructor.twitter }}" class="text-muted me-2"><i class="fab fa-twitter"></i></a>
+                            {% endif %}
+                            {% if instructor.linkedin %}
+                            <a href="{{ instructor.linkedin }}" class="text-muted"><i class="fab fa-linkedin"></i></a>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="card-footer bg-transparent border-0 text-center pb-4">
+                        <a href="{% url 'core:instructor_detail' instructor.id %}" class="btn btn-sm btn-outline-primary">
+                            View Profile
+                        </a>
+                    </div>
+                </div>
+            </div>
+            {% empty %}
+            <div class="col-12 text-center py-5">
+                <i class="fas fa-chalkboard-teacher fa-3x text-muted mb-3"></i>
+                <h4>Instructor information coming soon</h4>
+                <p class="text-muted">Our team of qualified scholars will be announced shortly</p>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</section>
+
+<!-- Course Categories -->
+<section class="py-5">
+    <div class="container">
+        <div class="row mb-5">
+            <div class="col-lg-8 mx-auto text-center">
+                <h2 class="fw-bold mb-3">Our Course Categories</h2>
+                <p class="lead text-muted">Comprehensive Islamic education for all levels</p>
+            </div>
+        </div>
+        
+        <div class="row g-4">
+            <div class="col-md-6 col-lg-3">
+                <a href="{% url 'core:courses' %}?category=quran" class="text-decoration-none">
+                    <div class="category-card card border-0 shadow-sm h-100 hover-lift">
+                        <div class="card-body text-center p-5">
+                            <div class="icon-wrapper bg-primary bg-opacity-10 rounded-circle p-4 mb-4 mx-auto">
+                                <i class="fas fa-quran fa-2x text-primary"></i>
+                            </div>
+                            <h4 class="fw-bold mb-3">Quran Recitation</h4>
+                            <p class="text-muted mb-0">Learn authentic Quran recitation with proper Tajweed rules and pronunciation.</p>
+                        </div>
+                    </div>
+                </a>
+            </div>
+            
+            <div class="col-md-6 col-lg-3">
+                <a href="{% url 'core:courses' %}?category=tadabbur" class="text-decoration-none">
+                    <div class="category-card card border-0 shadow-sm h-100 hover-lift">
+                        <div class="card-body text-center p-5">
+                            <div class="icon-wrapper bg-success bg-opacity-10 rounded-circle p-4 mb-4 mx-auto">
+                                <i class="fas fa-book-open fa-2x text-success"></i>
+                            </div>
+                            <h4 class="fw-bold mb-3">Tadabbur Quran</h4>
+                            <p class="text-muted mb-0">Deep understanding and reflection on Quranic verses and their meanings.</p>
+                        </div>
+                    </div>
+                </a>
+            </div>
+            
+            <div class="col-md-6 col-lg-3">
+                <a href="{% url 'core:courses' %}?category=sirah" class="text-decoration-none">
+                    <div class="category-card card border-0 shadow-sm h-100 hover-lift">
+                        <div class="card-body text-center p-5">
+                            <div class="icon-wrapper bg-warning bg-opacity-10 rounded-circle p-4 mb-4 mx-auto">
+                                <i class="fas fa-mosque fa-2x text-warning"></i>
+                            </div>
+                            <h4 class="fw-bold mb-3">Riratunnabi (SM)</h4>
+                            <p class="text-muted mb-0">Study the life, teachings, and traditions of Prophet Muhammad (Peace be upon him).</p>
+                        </div>
+                    </div>
+                </a>
+            </div>
+            
+            <div class="col-md-6 col-lg-3">
+                <a href="{% url 'core:courses' %}?category=aqida" class="text-decoration-none">
+                    <div class="category-card card border-0 shadow-sm h-100 hover-lift">
+                        <div class="card-body text-center p-5">
+                            <div class="icon-wrapper bg-info bg-opacity-10 rounded-circle p-4 mb-4 mx-auto">
+                                <i class="fas fa-brain fa-2x text-info"></i>
+                            </div>
+                            <h4 class="fw-bold mb-3">Aqida Learning</h4>
+                            <p class="text-muted mb-0">Fundamental Islamic beliefs and creed based on authentic sources.</p>
+                        </div>
+                    </div>
+                </a>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- From Our Blog -->
+<section class="py-5 bg-light">
+    <div class="container">
+        <div class="row mb-5">
+            <div class="col-md-8">
+                <h2 class="fw-bold mb-3">From Our Blog</h2>
+                <p class="text-muted">Latest articles and Islamic insights</p>
+            </div>
+            <div class="col-md-4 text-md-end">
+                <a href="{% url 'core:blog' %}" class="btn btn-outline-primary">Read All Articles <i class="fas fa-arrow-right ms-2"></i></a>
+            </div>
+        </div>
+        
+        <div class="row g-4">
+            {% for post in recent_posts %}
+            <div class="col-md-6 col-lg-4">
+                <div class="card border-0 shadow-sm h-100">
+                    {% if post.featured_image %}
+                    <img src="{{ post.featured_image.url }}" class="card-img-top" alt="{{ post.title }}" style="height: 200px; object-fit: cover;">
+                    {% else %}
+                    <div class="card-img-top bg-secondary d-flex align-items-center justify-content-center" style="height: 200px;">
+                        <i class="fas fa-newspaper fa-3x text-light"></i>
+                    </div>
+                    {% endif %}
+                    
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <span class="badge bg-light text-dark">{{ post.get_category_display }}</span>
+                            <span class="text-muted small">
+                                <i class="far fa-calendar me-1"></i> {{ post.published_at|date:"d M, Y" }}
+                            </span>
+                        </div>
+                        
+                        <h5 class="card-title fw-bold mb-3">
+                            <a href="{% url 'core:blog_detail' post.slug %}" class="text-decoration-none text-dark">
+                                {{ post.title|truncatewords:8 }}
+                            </a>
+                        </h5>
+                        
+                        <p class="card-text text-muted mb-4">{{ post.excerpt|truncatewords:20 }}</p>
+                        
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div class="d-flex align-items-center">
+                                {% if post.author.student_profile.profile_picture %}
+                                <img src="{{ post.author.student_profile.profile_picture.url }}" 
+                                     class="rounded-circle me-2" 
+                                     width="30" height="30" 
+                                     alt="{{ post.author.get_full_name }}">
+                                {% else %}
+                                <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center me-2" 
+                                     style="width: 30px; height: 30px; font-size: 0.8rem;">
+                                    {{ post.author.first_name|first|upper }}
+                                </div>
+                                {% endif %}
+                                <span class="small">{{ post.author.get_full_name }}</span>
+                            </div>
+                            <a href="{% url 'core:blog_detail' post.slug %}" class="btn btn-sm btn-outline-primary">
+                                Read More
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% empty %}
+            <div class="col-12 text-center py-5">
+                <i class="fas fa-newspaper fa-3x text-muted mb-3"></i>
+                <h4>No blog posts yet</h4>
+                <p class="text-muted">Check back soon for insightful articles</p>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</section>
+
+<!-- Call to Action -->
+<section class="py-5 bg-primary text-white">
+    <div class="container">
+        <div class="row align-items-center">
+            <div class="col-lg-8">
+                <h2 class="fw-bold mb-3">Ready to Start Your Islamic Learning Journey?</h2>
+                <p class="lead mb-0">Join thousands of students learning authentic Islamic knowledge online.</p>
+            </div>
+            <div class="col-lg-4 text-lg-end mt-4 mt-lg-0">
+                <div class="d-flex flex-column flex-lg-row gap-3">
+                    <a href="{% url 'core:register' %}" class="btn btn-light btn-lg px-4">
+                        <i class="fas fa-user-plus me-2"></i>Register Now
+                    </a>
+                    <a href="{% url 'core:contact' %}" class="btn btn-outline-light btn-lg px-4">
+                        <i class="fas fa-question-circle me-2"></i>Have Questions?
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Testimonials (Optional) -->
+<section class="py-5">
+    <div class="container">
+        <div class="row mb-5">
+            <div class="col-lg-8 mx-auto text-center">
+                <h2 class="fw-bold mb-3">What Our Students Say</h2>
+                <p class="lead text-muted">Hear from our satisfied students</p>
+            </div>
+        </div>
+        
+        <div class="row g-4">
+            <div class="col-md-6 col-lg-4">
+                <div class="testimonial-card card border-0 shadow-sm h-100">
+                    <div class="card-body p-4">
+                        <div class="d-flex align-items-center mb-4">
+                            <div class="bg-primary rounded-circle p-3 me-3">
+                                <i class="fas fa-user-graduate text-white"></i>
+                            </div>
+                            <div>
+                                <h6 class="fw-bold mb-0">Ahmed Rahman</h6>
+                                <p class="text-muted small mb-0">Quran Recitation Course</p>
+                            </div>
+                        </div>
+                        <p class="mb-0">
+                            <i class="fas fa-quote-left text-primary me-2"></i>
+                            The teaching methodology is excellent. I improved my Tajweed significantly in just 3 months.
+                            <i class="fas fa-quote-right text-primary ms-2"></i>
+                        </p>
+                    </div>
+                    <div class="card-footer bg-transparent border-0 pt-0">
+                        <div class="text-warning">
+                            <i class="fas fa-star"></i>
+                            <i class="fas fa-star"></i>
+                            <i class="fas fa-star"></i>
+                            <i class="fas fa-star"></i>
+                            <i class="fas fa-star"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-6 col-lg-4">
+                <div class="testimonial-card card border-0 shadow-sm h-100">
+                    <div class="card-body p-4">
+                        <div class="d-flex align-items-center mb-4">
+                            <div class="bg-success rounded-circle p-3 me-3">
+                                <i class="fas fa-user-tie text-white"></i>
+                            </div>
+                            <div>
+                                <h6 class="fw-bold mb-0">Fatima Begum</h6>
+                                <p class="text-muted small mb-0">Tadabbur Quran Course</p>
+                            </div>
+                        </div>
+                        <p class="mb-0">
+                            <i class="fas fa-quote-left text-success me-2"></i>
+                            As a working professional, the flexible timing is perfect. The depth of knowledge is exceptional.
+                            <i class="fas fa-quote-right text-success ms-2"></i>
+                        </p>
+                    </div>
+                    <div class="card-footer bg-transparent border-0 pt-0">
+                        <div class="text-warning">
+                            <i class="fas fa-star"></i>
+                            <i class="fas fa-star"></i>
+                            <i class="fas fa-star"></i>
+                            <i class="fas fa-star"></i>
+                            <i class="fas fa-star-half-alt"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-12 col-lg-4">
+                <div class="testimonial-card card border-0 shadow-sm h-100">
+                    <div class="card-body p-4">
+                        <div class="d-flex align-items-center mb-4">
+                            <div class="bg-warning rounded-circle p-3 me-3">
+                                <i class="fas fa-user-md text-white"></i>
+                            </div>
+                            <div>
+                                <h6 class="fw-bold mb-0">Dr. Mohammad Ali</h6>
+                                <p class="text-muted small mb-0">Aqida Learning Course</p>
+                            </div>
+                        </div>
+                        <p class="mb-0">
+                            <i class="fas fa-quote-left text-warning me-2"></i>
+                            The authenticity of the content is remarkable. Learned proper Aqida from authentic sources.
+                            <i class="fas fa-quote-right text-warning ms-2"></i>
+                        </p>
+                    </div>
+                    <div class="card-footer bg-transparent border-0 pt-0">
+                        <div class="text-warning">
+                            <i class="fas fa-star"></i>
+                            <i class="fas fa-star"></i>
+                            <i class="fas fa-star"></i>
+                            <i class="fas fa-star"></i>
+                            <i class="fas fa-star"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .hero-section {
+        background: linear-gradient(135deg, #1a5fb4 0%, #26a269 100%);
+        color: white;
+        padding: 100px 0;
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .hero-section::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-image: url("{% static 'images/islamic-pattern.png' %}");
+        opacity: 0.05;
+        background-size: 300px;
+    }
+    
+    .min-vh-80 {
+        min-height: 80vh;
+    }
+    
+    .floating-elements {
+        position: relative;
+        height: 400px;
+    }
+    
+    .floating-card {
+        position: absolute;
+        width: 280px;
+        animation: float 6s ease-in-out infinite;
+    }
+    
+    .floating-card-1 {
+        top: 0;
+        left: 0;
+        animation-delay: 0s;
+    }
+    
+    .floating-card-2 {
+        top: 120px;
+        right: 0;
+        animation-delay: 2s;
+    }
+    
+    .floating-card-3 {
+        bottom: 0;
+        left: 50%;
+        transform: translateX(-50%);
+        animation-delay: 4s;
+    }
+    
+    @keyframes float {
+        0%, 100% {
+            transform: translateY(0);
+        }
+        50% {
+            transform: translateY(-20px);
+        }
+    }
+    
+    .hero-shape-1 {
+        position: absolute;
+        top: -100px;
+        right: -100px;
+        width: 300px;
+        height: 300px;
+        border-radius: 50%;
+        background: rgba(255, 255, 255, 0.1);
+    }
+    
+    .hero-shape-2 {
+        position: absolute;
+        bottom: -50px;
+        left: -50px;
+        width: 200px;
+        height: 200px;
+        border-radius: 50%;
+        background: rgba(255, 255, 255, 0.05);
+    }
+    
+    .badge-quran {
+        background-color: #1a5fb4 !important;
+        color: white !important;
+    }
+    
+    .badge-tadabbur {
+        background-color: #26a269 !important;
+        color: white !important;
+    }
+    
+    .badge-sirah {
+        background-color: #c64600 !important;
+        color: white !important;
+    }
+    
+    .badge-aqida {
+        background-color: #613583 !important;
+        color: white !important;
+    }
+    
+    .badge-other {
+        background-color: #666666 !important;
+        color: white !important;
+    }
+    
+    .hover-lift {
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+    
+    .hover-lift:hover {
+        transform: translateY(-10px);
+        box-shadow: 0 15px 30px rgba(0, 0, 0, 0.1) !important;
+    }
+    
+    .course-card {
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+        border: none;
+        border-radius: 15px;
+        overflow: hidden;
+    }
+    
+    .course-card:hover {
+        transform: translateY(-10px);
+        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15) !important;
+    }
+    
+    .icon-wrapper {
+        transition: transform 0.3s ease;
+    }
+    
+    .category-card:hover .icon-wrapper {
+        transform: scale(1.1);
+    }
+    
+    .instructor-img {
+        width: 120px;
+        height: 120px;
+        border-radius: 50%;
+        object-fit: cover;
+        border: 4px solid #f8f9fa;
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+    }
+    
+    .testimonial-card {
+        border-left: 4px solid #1a5fb4;
+        transition: transform 0.3s ease;
+    }
+    
+    .testimonial-card:hover {
+        transform: translateY(-5px);
+    }
+    
+    @media (max-width: 768px) {
+        .hero-section {
+            padding: 60px 0;
+        }
+        
+        .floating-elements {
+            height: auto;
+            margin-top: 40px;
+        }
+        
+        .floating-card {
+            position: relative;
+            width: 100%;
+            margin-bottom: 20px;
+            animation: none;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    $(document).ready(function() {
+        // Course card hover effect
+        $('.course-card').hover(
+            function() {
+                $(this).find('.card-img-top').css('transform', 'scale(1.05)');
+            },
+            function() {
+                $(this).find('.card-img-top').css('transform', 'scale(1)');
+            }
+        );
+        
+        // Animate stats counting
+        $('.stat-number').each(function() {
+            var $this = $(this);
+            var countTo = $this.text().replace('+', '');
+            
+            if (countTo.includes('+')) {
+                countTo = countTo.replace('+', '');
+            }
+            
+            $({ countNum: 0 }).animate({
+                countNum: countTo
+            }, {
+                duration: 2000,
+                easing: 'swing',
+                step: function() {
+                    $this.text(Math.floor(this.countNum) + '+');
+                },
+                complete: function() {
+                    $this.text(countTo + '+');
+                }
+            });
+        });
+        
+        // Testimonial carousel
+        $('.testimonial-card').hover(
+            function() {
+                $(this).css('z-index', '10');
+            },
+            function() {
+                $(this).css('z-index', '1');
+            }
+        );
+        
+        // Smooth scroll for anchor links
+        $('a[href^="#"]').on('click', function(event) {
+            if (this.hash !== "") {
+                event.preventDefault();
+                var hash = this.hash;
+                $('html, body').animate({
+                    scrollTop: $(hash).offset().top - 100
+                }, 800);
+            }
+        });
+        
+        // Initialize tooltips
+        $('[data-bs-toggle="tooltip"]').tooltip();
+    });
+</script>
+{% endblock %}

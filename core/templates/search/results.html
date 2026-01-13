@@ -1,0 +1,190 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <!-- Search Header -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <h1 class="h2 mb-3">Search Results</h1>
+            <div class="search-summary mb-4">
+                <p class="text-muted">
+                    {% if results.query %}
+                        Showing results for: <strong>"{{ results.query }}"</strong>
+                    {% else %}
+                        Please enter a search term
+                    {% endif %}
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Search Form -->
+    <div class="row mb-5">
+        <div class="col-lg-8 mx-auto">
+            <form method="get" action="{% url 'search' %}" class="search-form">
+                <div class="input-group input-group-lg">
+                    <input type="text" 
+                           name="q" 
+                           class="form-control" 
+                           placeholder="Search courses, articles, instructors..." 
+                           value="{{ results.query }}"
+                           required>
+                    <button class="btn btn-primary" type="submit">
+                        <i class="fas fa-search"></i> Search
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Results -->
+    {% if results.query %}
+        <!-- Courses Results -->
+        {% if results.courses %}
+        <div class="search-section mb-5">
+            <h2 class="h4 mb-3 border-bottom pb-2">
+                <i class="fas fa-book me-2 text-primary"></i> Courses ({{ results.courses|length }})
+            </h2>
+            <div class="row g-4">
+                {% for course in results.courses %}
+                <div class="col-md-6 col-lg-4">
+                    <div class="card h-100 border-0 shadow-sm">
+                        {% if course.image %}
+                        <img src="{{ course.image.url }}" class="card-img-top" alt="{{ course.name }}" style="height: 200px; object-fit: cover;">
+                        {% endif %}
+                        <div class="card-body">
+                            <h5 class="card-title">{{ course.name }}</h5>
+                            <p class="card-text text-muted small">{{ course.short_description|truncatewords:20 }}</p>
+                            <a href="{% url 'course_detail' course.slug %}" class="btn btn-sm btn-outline-primary">View Course</a>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Blog Results -->
+        {% if results.blog_posts %}
+        <div class="search-section mb-5">
+            <h2 class="h4 mb-3 border-bottom pb-2">
+                <i class="fas fa-blog me-2 text-success"></i> Articles ({{ results.blog_posts|length }})
+            </h2>
+            <div class="row g-4">
+                {% for post in results.blog_posts %}
+                <div class="col-md-6">
+                    <div class="card h-100 border-0 shadow-sm">
+                        <div class="card-body">
+                            <h5 class="card-title">{{ post.title }}</h5>
+                            <p class="card-text text-muted small">{{ post.excerpt|truncatewords:30 }}</p>
+                            <div class="d-flex justify-content-between align-items-center">
+                                <span class="text-muted small">
+                                    <i class="far fa-calendar me-1"></i>
+                                    {{ post.published_date|date:"M d, Y" }}
+                                </span>
+                                <a href="{% url 'blog_detail' post.slug %}" class="btn btn-sm btn-outline-success">Read More</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Instructor Results -->
+        {% if results.instructors %}
+        <div class="search-section mb-5">
+            <h2 class="h4 mb-3 border-bottom pb-2">
+                <i class="fas fa-chalkboard-teacher me-2 text-warning"></i> Instructors ({{ results.instructors|length }})
+            </h2>
+            <div class="row g-4">
+                {% for instructor in results.instructors %}
+                <div class="col-md-6 col-lg-3">
+                    <div class="card h-100 border-0 shadow-sm text-center">
+                        {% if instructor.profile_picture %}
+                        <img src="{{ instructor.profile_picture.url }}" 
+                             class="card-img-top rounded-circle mx-auto mt-3" 
+                             alt="{{ instructor.full_name }}"
+                             style="width: 100px; height: 100px; object-fit: cover;">
+                        {% endif %}
+                        <div class="card-body">
+                            <h5 class="card-title">{{ instructor.full_name }}</h5>
+                            <p class="card-text text-muted small">{{ instructor.specialization }}</p>
+                            <a href="{% url 'instructor_detail' instructor.id %}" class="btn btn-sm btn-outline-warning">View Profile</a>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- No Results -->
+        {% if not results.courses and not results.blog_posts and not results.instructors %}
+        <div class="text-center py-5">
+            <div class="empty-state">
+                <i class="fas fa-search fa-4x text-muted mb-4"></i>
+                <h3 class="h4 mb-3">No results found</h3>
+                <p class="text-muted mb-4">
+                    We couldn't find any matches for "{{ results.query }}".<br>
+                    Try different keywords or browse our categories.
+                </p>
+                <div class="d-flex justify-content-center gap-3">
+                    <a href="{% url 'courses' %}" class="btn btn-primary">
+                        <i class="fas fa-book me-2"></i>Browse Courses
+                    </a>
+                    <a href="{% url 'blog' %}" class="btn btn-success">
+                        <i class="fas fa-blog me-2"></i>Browse Articles
+                    </a>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    {% else %}
+        <!-- Empty Search -->
+        <div class="text-center py-5">
+            <div class="empty-state">
+                <i class="fas fa-search fa-4x text-muted mb-4"></i>
+                <h3 class="h4 mb-3">Start Your Search</h3>
+                <p class="text-muted mb-4">
+                    Enter keywords to search for courses, articles, or instructors
+                </p>
+            </div>
+        </div>
+    {% endif %}
+</div>
+
+<style>
+.search-section {
+    padding: 1.5rem;
+    background: #f8f9fa;
+    border-radius: 10px;
+    margin-bottom: 2rem;
+}
+
+.search-form .input-group {
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+.search-form input {
+    border: none;
+    padding: 1rem 1.5rem;
+}
+
+.search-form button {
+    border: none;
+    padding: 0 2rem;
+}
+
+.empty-state {
+    max-width: 500px;
+    margin: 0 auto;
+}
+</style>
+{% endblock %}

@@ -1,0 +1,310 @@
+{% extends 'admin/base_admin.html' %}
+{% load static %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h2 mb-0">Contact Messages</h1>
+            <p class="text-muted mb-0">Manage and respond to contact form submissions</p>
+        </div>
+        <div>
+            <a href="{% url 'admin_dashboard' %}" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-left me-2"></i>Back to Dashboard
+            </a>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-body">
+            <form method="get" class="row g-3">
+                <div class="col-md-4">
+                    <label class="form-label">Filter by Status</label>
+                    <select name="status" class="form-select">
+                        <option value="">All Statuses</option>
+                        {% for status, label in status_choices %}
+                        <option value="{{ status }}" {% if selected_status == status %}selected{% endif %}>
+                            {{ label }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Filter by Priority</label>
+                    <select name="priority" class="form-select">
+                        <option value="">All Priorities</option>
+                        {% for priority, label in priority_choices %}
+                        <option value="{{ priority }}" {% if selected_priority == priority %}selected{% endif %}>
+                            {{ label }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-4 d-flex align-items-end">
+                    <button type="submit" class="btn btn-primary me-2">
+                        <i class="fas fa-filter me-2"></i>Apply Filters
+                    </button>
+                    <a href="{% url 'contact_messages' %}" class="btn btn-outline-secondary">
+                        <i class="fas fa-redo me-2"></i>Reset
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Stats Cards -->
+    <div class="row g-4 mb-4">
+        <div class="col-md-3">
+            <div class="card border-0 bg-primary text-white shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="text-white-50">Total Messages</h6>
+                            <h3 class="mb-0">{{ contact_messages.paginator.count }}</h3>
+                        </div>
+                        <i class="fas fa-inbox fa-2x opacity-50"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 bg-warning text-white shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="text-white-50">Unread</h6>
+                            <h3 class="mb-0">{{ contact_messages.object_list|length }}</h3>
+                        </div>
+                        <i class="fas fa-envelope fa-2x opacity-50"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 bg-success text-white shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="text-white-50">Resolved</h6>
+                            <h3 class="mb-0">{{ resolved_count|default:0 }}</h3>
+                        </div>
+                        <i class="fas fa-check-circle fa-2x opacity-50"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 bg-danger text-white shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="text-white-50">High Priority</h6>
+                            <h3 class="mb-0">{{ high_priority_count|default:0 }}</h3>
+                        </div>
+                        <i class="fas fa-exclamation-circle fa-2x opacity-50"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Messages Table -->
+    <div class="card border-0 shadow-sm">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th class="ps-4">Sender</th>
+                            <th>Subject</th>
+                            <th>Type</th>
+                            <th>Priority</th>
+                            <th>Status</th>
+                            <th>Received</th>
+                            <th class="text-end pe-4">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for message in contact_messages %}
+                        <tr class="{% if not message.is_read %}table-info{% endif %}">
+                            <td class="ps-4">
+                                <div class="d-flex align-items-center">
+                                    {% if not message.is_read %}
+                                    <span class="badge bg-primary me-2">NEW</span>
+                                    {% endif %}
+                                    <div>
+                                        <strong>{{ message.name }}</strong>
+                                        <br>
+                                        <small class="text-muted">{{ message.email }}</small>
+                                    </div>
+                                </div>
+                            </td>
+                            <td>
+                                <strong>{{ message.subject|truncatewords:5 }}</strong>
+                                <br>
+                                <small class="text-muted">{{ message.message|truncatewords:10 }}</small>
+                            </td>
+                            <td>
+                                <span class="badge bg-info">{{ message.get_subject_type_display }}</span>
+                            </td>
+                            <td>
+                                {% if message.priority == 'high' %}
+                                <span class="badge bg-danger">High</span>
+                                {% elif message.priority == 'medium' %}
+                                <span class="badge bg-warning">Medium</span>
+                                {% else %}
+                                <span class="badge bg-secondary">Low</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if message.status == 'pending' %}
+                                <span class="badge bg-warning">Pending</span>
+                                {% elif message.status == 'in_progress' %}
+                                <span class="badge bg-info">In Progress</span>
+                                {% elif message.status == 'resolved' %}
+                                <span class="badge bg-success">Resolved</span>
+                                {% elif message.status == 'closed' %}
+                                <span class="badge bg-secondary">Closed</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <small>{{ message.received_at|date:"M d, Y" }}</small>
+                                <br>
+                                <small class="text-muted">{{ message.received_at|date:"h:i A" }}</small>
+                            </td>
+                            <td class="text-end pe-4">
+                                <div class="btn-group btn-group-sm">
+                                    <a href="{% url 'contact_message_detail' message.id %}" 
+                                       class="btn btn-outline-primary">
+                                        <i class="fas fa-eye"></i>
+                                    </a>
+                                    {% if message.status != 'resolved' %}
+                                    <a href="{% url 'mark_message_resolved' message.id %}" 
+                                       class="btn btn-outline-success"
+                                       onclick="return confirm('Mark this message as resolved?')">
+                                        <i class="fas fa-check"></i>
+                                    </a>
+                                    {% endif %}
+                                </div>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="7" class="text-center py-4">
+                                <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
+                                <h5 class="text-muted">No messages found</h5>
+                                <p class="text-muted">No contact messages match your filters</p>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Pagination -->
+    {% if contact_messages.has_other_pages %}
+    <nav class="mt-4">
+        <ul class="pagination justify-content-center">
+            {% if contact_messages.has_previous %}
+            <li class="page-item">
+                <a class="page-link" href="?page=1{% if selected_status %}&status={{ selected_status }}{% endif %}{% if selected_priority %}&priority={{ selected_priority }}{% endif %}">
+                    <i class="fas fa-angle-double-left"></i>
+                </a>
+            </li>
+            <li class="page-item">
+                <a class="page-link" href="?page={{ contact_messages.previous_page_number }}{% if selected_status %}&status={{ selected_status }}{% endif %}{% if selected_priority %}&priority={{ selected_priority }}{% endif %}">
+                    <i class="fas fa-angle-left"></i>
+                </a>
+            </li>
+            {% endif %}
+
+            {% for num in contact_messages.paginator.page_range %}
+                {% if contact_messages.number == num %}
+                <li class="page-item active">
+                    <span class="page-link">{{ num }}</span>
+                </li>
+                {% elif num > contact_messages.number|add:'-3' and num < contact_messages.number|add:'3' %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ num }}{% if selected_status %}&status={{ selected_status }}{% endif %}{% if selected_priority %}&priority={{ selected_priority }}{% endif %}">{{ num }}</a>
+                </li>
+                {% endif %}
+            {% endfor %}
+
+            {% if contact_messages.has_next %}
+            <li class="page-item">
+                <a class="page-link" href="?page={{ contact_messages.next_page_number }}{% if selected_status %}&status={{ selected_status }}{% endif %}{% if selected_priority %}&priority={{ selected_priority }}{% endif %}">
+                    <i class="fas fa-angle-right"></i>
+                </a>
+            </li>
+            <li class="page-item">
+                <a class="page-link" href="?page={{ contact_messages.paginator.num_pages }}{% if selected_status %}&status={{ selected_status }}{% endif %}{% if selected_priority %}&priority={{ selected_priority }}{% endif %}">
+                    <i class="fas fa-angle-double-right"></i>
+                </a>
+            </li>
+            {% endif %}
+        </ul>
+    </nav>
+    {% endif %}
+
+    <!-- Export Options -->
+    <div class="card border-0 shadow-sm mt-4">
+        <div class="card-body">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h6 class="mb-0">Export Messages</h6>
+                    <p class="text-muted small mb-0">Download contact messages data</p>
+                </div>
+                <div class="btn-group">
+                    <button type="button" class="btn btn-outline-primary">
+                        <i class="fas fa-file-excel me-2"></i>Excel
+                    </button>
+                    <button type="button" class="btn btn-outline-success">
+                        <i class="fas fa-file-csv me-2"></i>CSV
+                    </button>
+                    <button type="button" class="btn btn-outline-danger">
+                        <i class="fas fa-file-pdf me-2"></i>PDF
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.table th {
+    font-weight: 600;
+    font-size: 0.875rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.table tbody tr:hover {
+    background-color: rgba(var(--bs-primary-rgb), 0.05);
+}
+
+.badge {
+    font-size: 0.75rem;
+    padding: 0.35em 0.65em;
+}
+
+.page-link {
+    border-color: #dee2e6;
+    color: #495057;
+}
+
+.page-item.active .page-link {
+    background-color: var(--bs-primary);
+    border-color: var(--bs-primary);
+}
+
+.btn-group-sm > .btn {
+    padding: 0.25rem 0.5rem;
+}
+</style>
+{% endblock %}

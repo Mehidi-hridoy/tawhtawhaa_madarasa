@@ -1,0 +1,555 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <!-- Sidebar -->
+        <nav id="sidebar" class="col-md-3 col-lg-2 d-md-block bg-light sidebar collapse">
+            <div class="position-sticky pt-3">
+                <!-- Profile Card -->
+                <div class="text-center mb-4 p-3">
+                    {% if student.profile_picture %}
+                    <img src="{{ student.profile_picture.url }}" 
+                         class="rounded-circle mb-3" 
+                         width="80" height="80"
+                         alt="{{ student.full_name }}">
+                    {% else %}
+                    <div class="rounded-circle bg-primary d-flex align-items-center justify-content-center mb-3 mx-auto" 
+                         style="width: 80px; height: 80px;">
+                        <span class="h3 text-light">{{ student.full_name|first|upper }}</span>
+                    </div>
+                    {% endif %}
+                    <h6 class="fw-bold mb-1">{{ student.full_name }}</h6>
+                    <p class="text-muted small mb-2">{{ student.get_occupation_display }}</p>
+                    <div class="badge bg-success">Active Student</div>
+                </div>
+                
+                <!-- Navigation -->
+                <ul class="nav flex-column">
+                    <li class="nav-item">
+                        <a class="nav-link active" href="{% url 'core:dashboard' %}">
+                            <i class="fas fa-tachometer-alt me-2"></i>Dashboard
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'core:my_courses' %}">
+                            <i class="fas fa-book me-2"></i>My Courses
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'core:my_progress' %}">
+                            <i class="fas fa-chart-line me-2"></i>Progress
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'core:payment_history' %}">
+                            <i class="fas fa-receipt me-2"></i>Payments
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'core:certificates' %}">
+                            <i class="fas fa-certificate me-2"></i>Certificates
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'core:schedule' %}">
+                            <i class="fas fa-calendar-alt me-2"></i>Schedule
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'core:profile_settings' %}">
+                            <i class="fas fa-user-cog me-2"></i>Settings
+                        </a>
+                    </li>
+                    <li class="nav-item mt-3">
+                        <a class="nav-link text-danger" href="{% url 'core:logout' %}">
+                            <i class="fas fa-sign-out-alt me-2"></i>Logout
+                        </a>
+                    </li>
+                </ul>
+                
+                <!-- Quick Stats -->
+                <div class="mt-4 p-3 bg-white rounded-3 border">
+                    <h6 class="fw-bold mb-3">Quick Stats</h6>
+                    <div class="row">
+                        <div class="col-6 mb-3">
+                            <small class="text-muted d-block">Courses</small>
+                            <h5 class="fw-bold mb-0">{{ active_courses }}</h5>
+                        </div>
+                        <div class="col-6 mb-3">
+                            <small class="text-muted d-block">Progress</small>
+                            <h5 class="fw-bold mb-0">{{ overall_progress|floatformat:0 }}%</h5>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </nav>
+        
+        <!-- Main Content -->
+        <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4">
+            <!-- Header -->
+            <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+                <h1 class="h2 fw-bold">Dashboard</h1>
+                <div class="btn-toolbar mb-2 mb-md-0">
+                    <div class="btn-group me-2">
+                        <button type="button" class="btn btn-sm btn-outline-primary">Today</button>
+                        <button type="button" class="btn btn-sm btn-outline-primary">Week</button>
+                        <button type="button" class="btn btn-sm btn-outline-primary">Month</button>
+                    </div>
+                    <button type="button" class="btn btn-sm btn-outline-secondary" id="toggleSidebar">
+                        <i class="fas fa-bars"></i>
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Stats Cards -->
+            <div class="row mb-4">
+                <div class="col-xl-3 col-md-6 mb-4">
+                    <div class="card border-start border-primary border-4 shadow-sm h-100 py-2">
+                        <div class="card-body">
+                            <div class="row no-gutters align-items-center">
+                                <div class="col mr-2">
+                                    <div class="text-xs fw-bold text-primary text-uppercase mb-1">
+                                        Enrolled Courses
+                                    </div>
+                                    <div class="h5 mb-0 fw-bold">{{ enrolled_courses.count }}</div>
+                                    <div class="mt-2 mb-0">
+                                        <span class="badge bg-primary">{{ active_courses }} Active</span>
+                                    </div>
+                                </div>
+                                <div class="col-auto">
+                                    <i class="fas fa-book fa-2x text-gray-300"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-xl-3 col-md-6 mb-4">
+                    <div class="card border-start border-success border-4 shadow-sm h-100 py-2">
+                        <div class="card-body">
+                            <div class="row no-gutters align-items-center">
+                                <div class="col mr-2">
+                                    <div class="text-xs fw-bold text-success text-uppercase mb-1">
+                                        Overall Progress
+                                    </div>
+                                    <div class="h5 mb-0 fw-bold">{{ overall_progress|floatformat:0 }}%</div>
+                                    <div class="mt-2">
+                                        <div class="progress" style="height: 6px;">
+                                            <div class="progress-bar bg-success" style="width: {{ overall_progress }}%"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-auto">
+                                    <i class="fas fa-chart-line fa-2x text-gray-300"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-xl-3 col-md-6 mb-4">
+                    <div class="card border-start border-warning border-4 shadow-sm h-100 py-2">
+                        <div class="card-body">
+                            <div class="row no-gutters align-items-center">
+                                <div class="col mr-2">
+                                    <div class="text-xs fw-bold text-warning text-uppercase mb-1">
+                                        Attendance Rate
+                                    </div>
+                                    <div class="h5 mb-0 fw-bold">{{ attendance_rate|floatformat:0 }}%</div>
+                                    <div class="mt-2">
+                                        <span class="text-muted small">Last 30 days</span>
+                                    </div>
+                                </div>
+                                <div class="col-auto">
+                                    <i class="fas fa-user-check fa-2x text-gray-300"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-xl-3 col-md-6 mb-4">
+                    <div class="card border-start border-danger border-4 shadow-sm h-100 py-2">
+                        <div class="card-body">
+                            <div class="row no-gutters align-items-center">
+                                <div class="col mr-2">
+                                    <div class="text-xs fw-bold text-danger text-uppercase mb-1">
+                                        Due Payments
+                                    </div>
+                                    <div class="h5 mb-0 fw-bold">৳{{ due_amount|floatformat:0 }}</div>
+                                    <div class="mt-2">
+                                        <a href="{% url 'core:payment_history' %}" class="small text-decoration-none">
+                                            View Details
+                                        </a>
+                                    </div>
+                                </div>
+                                <div class="col-auto">
+                                    <i class="fas fa-credit-card fa-2x text-gray-300"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Payment Reminders -->
+            {% if payment_reminders %}
+            <div class="row mb-4">
+                <div class="col-12">
+                    <div class="card border-warning shadow-sm">
+                        <div class="card-header bg-warning bg-opacity-10 border-warning">
+                            <h5 class="fw-bold mb-0">
+                                <i class="fas fa-exclamation-triangle me-2 text-warning"></i>Payment Reminders
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            {% for reminder in payment_reminders %}
+                            <div class="row align-items-center mb-3">
+                                <div class="col-md-8">
+                                    <h6 class="fw-bold mb-1">{{ reminder.enrollment.course.name }}</h6>
+                                    <p class="text-muted small mb-0">
+                                        Due: ৳{{ reminder.amount_due }} by {{ reminder.due_date|date:"d M Y" }}
+                                    </p>
+                                </div>
+                                <div class="col-md-4 text-end">
+                                    <a href="{% url 'core:make_payment' reminder.enrollment.id %}" 
+                                       class="btn btn-sm btn-warning">
+                                        <i class="fas fa-money-bill-wave me-2"></i>Pay Now
+                                    </a>
+                                </div>
+                            </div>
+                            {% if not forloop.last %}<hr>{% endif %}
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+            
+            <!-- Completion Alerts -->
+            {% if completion_alerts %}
+            <div class="row mb-4">
+                <div class="col-12">
+                    <div class="card border-success shadow-sm">
+                        <div class="card-header bg-success bg-opacity-10 border-success">
+                            <h5 class="fw-bold mb-0">
+                                <i class="fas fa-trophy me-2 text-success"></i>Completion Alerts
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            {% for alert in completion_alerts %}
+                            <div class="row align-items-center mb-3">
+                                <div class="col-md-8">
+                                    <h6 class="fw-bold mb-1">{{ alert.course }}</h6>
+                                    <div class="progress mb-2" style="height: 8px;">
+                                        <div class="progress-bar bg-success" style="width: {{ alert.score }}%"></div>
+                                    </div>
+                                    <p class="text-muted small mb-0">
+                                        Progress: {{ alert.score|floatformat:0 }}% - Almost Complete!
+                                    </p>
+                                </div>
+                                <div class="col-md-4 text-end">
+                                    <a href="{% url 'core:download_certificate' alert.enrollment_id %}" 
+                                       class="btn btn-sm btn-success">
+                                        <i class="fas fa-certificate me-2"></i>Get Certificate
+                                    </a>
+                                </div>
+                            </div>
+                            {% if not forloop.last %}<hr>{% endif %}
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+            
+            <!-- Active Courses -->
+            <div class="row mb-4">
+                <div class="col-12">
+                    <div class="card shadow-sm">
+                        <div class="card-header bg-white border-bottom">
+                            <h5 class="fw-bold mb-0">Active Courses</h5>
+                        </div>
+                        <div class="card-body">
+                            {% if enrolled_courses %}
+                            <div class="table-responsive">
+                                <table class="table table-hover">
+                                    <thead>
+                                        <tr>
+                                            <th>Course</th>
+                                            <th>Instructor</th>
+                                            <th>Progress</th>
+                                            <th>Next Class</th>
+                                            <th>Action</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for enrollment in enrolled_courses|slice:":5" %}
+                                        <tr>
+                                            <td>
+                                                <h6 class="fw-bold mb-1">{{ enrollment.course.name }}</h6>
+                                                <small class="text-muted">{{ enrollment.course.get_category_display }}</small>
+                                            </td>
+                                            <td>
+                                                {% if enrollment.assigned_instructor %}
+                                                {{ enrollment.assigned_instructor.full_name }}
+                                                {% else %}
+                                                <span class="text-muted">Not assigned</span>
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                <div class="d-flex align-items-center">
+                                                    <div class="progress flex-grow-1 me-2" style="height: 6px;">
+                                                        <div class="progress-bar" style="width: {{ enrollment.overall_progress }}%"></div>
+                                                    </div>
+                                                    <small class="fw-bold">{{ enrollment.overall_progress|floatformat:0 }}%</small>
+                                                </div>
+                                            </td>
+                                            <td>
+                                                {% if enrollment.next_class_date %}
+                                                <small class="text-muted">{{ enrollment.next_class_date|date:"d M" }}</small>
+                                                {% else %}
+                                                <span class="text-muted">-</span>
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                <a href="{% url 'core:course_detail' enrollment.course.id %}" 
+                                                   class="btn btn-sm btn-outline-primary">
+                                                    View
+                                                </a>
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                            <div class="text-end mt-3">
+                                <a href="{% url 'core:my_courses' %}" class="btn btn-sm btn-primary">
+                                    View All Courses
+                                </a>
+                            </div>
+                            {% else %}
+                            <div class="text-center py-4">
+                                <i class="fas fa-book fa-3x text-muted mb-3"></i>
+                                <h5 class="fw-bold mb-3">No Courses Enrolled</h5>
+                                <p class="text-muted mb-4">Start your learning journey by enrolling in a course</p>
+                                <a href="{% url 'core:courses' %}" class="btn btn-primary">
+                                    <i class="fas fa-search me-2"></i>Browse Courses
+                                </a>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Recent Activities -->
+            <div class="row">
+                <div class="col-lg-8">
+                    <div class="card shadow-sm">
+                        <div class="card-header bg-white border-bottom">
+                            <h5 class="fw-bold mb-0">Recent Activities</h5>
+                        </div>
+                        <div class="card-body">
+                            {% if recent_activities %}
+                            <div class="timeline">
+                                {% for activity in recent_activities %}
+                                <div class="timeline-item mb-3">
+                                    <div class="timeline-marker bg-{{ activity.status_color }}"></div>
+                                    <div class="timeline-content">
+                                        <div class="d-flex justify-content-between">
+                                            <h6 class="fw-bold mb-1">{{ activity.description }}</h6>
+                                            <small class="text-muted">{{ activity.date|date:"d M, Y" }}</small>
+                                        </div>
+                                        <p class="text-muted small mb-0">{{ activity.course }}</p>
+                                        <span class="badge bg-{{ activity.status_color }}">
+                                            {{ activity.status }}
+                                        </span>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                            {% else %}
+                            <div class="text-center py-4">
+                                <i class="fas fa-history fa-3x text-muted mb-3"></i>
+                                <p class="text-muted">No recent activities</p>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Quick Actions -->
+                <div class="col-lg-4">
+                    <div class="card shadow-sm">
+                        <div class="card-header bg-white border-bottom">
+                            <h5 class="fw-bold mb-0">Quick Actions</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="d-grid gap-2">
+                                <a href="{% url 'core:courses' %}" class="btn btn-outline-primary text-start">
+                                    <i class="fas fa-plus-circle me-2"></i>Enroll in New Course
+                                </a>
+                                <a href="{% url 'core:my_progress' %}" class="btn btn-outline-success text-start">
+                                    <i class="fas fa-chart-bar me-2"></i>View Progress Report
+                                </a>
+                                <a href="{% url 'core:schedule' %}" class="btn btn-outline-warning text-start">
+                                    <i class="fas fa-calendar-alt me-2"></i>View Class Schedule
+                                </a>
+                                <a href="{% url 'core:profile_settings' %}" class="btn btn-outline-info text-start">
+                                    <i class="fas fa-user-edit me-2"></i>Update Profile
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    #sidebar {
+        min-height: calc(100vh - 56px);
+        box-shadow: inset -1px 0 0 rgba(0, 0, 0, .1);
+    }
+    
+    .sidebar .nav-link {
+        color: #333;
+        padding: 0.75rem 1rem;
+        border-radius: 0.375rem;
+        margin-bottom: 0.25rem;
+    }
+    
+    .sidebar .nav-link.active {
+        background-color: rgba(26, 95, 180, 0.1);
+        color: #1a5fb4;
+        font-weight: 600;
+    }
+    
+    .sidebar .nav-link:hover:not(.active) {
+        background-color: rgba(0, 0, 0, 0.05);
+    }
+    
+    .border-start {
+        border-left-width: 4px !important;
+    }
+    
+    .timeline {
+        position: relative;
+        padding-left: 20px;
+    }
+    
+    .timeline-item {
+        position: relative;
+        padding-bottom: 10px;
+    }
+    
+    .timeline-marker {
+        position: absolute;
+        left: -20px;
+        top: 6px;
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+    }
+    
+    .timeline-content {
+        padding-left: 10px;
+    }
+    
+    @media (max-width: 768px) {
+        #sidebar {
+            position: fixed;
+            top: 56px;
+            left: -100%;
+            width: 100%;
+            height: calc(100vh - 56px);
+            z-index: 1000;
+            transition: left 0.3s;
+        }
+        
+        #sidebar.show {
+            left: 0;
+        }
+        
+        main {
+            margin-left: 0 !important;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    $(document).ready(function() {
+        // Toggle sidebar on mobile
+        $('#toggleSidebar').click(function() {
+            $('#sidebar').toggleClass('show');
+        });
+        
+        // Auto-refresh dashboard data every 30 seconds
+        function refreshDashboard() {
+            $.ajax({
+                url: '{% url "core:dashboard_stats" %}',
+                success: function(data) {
+                    // Update stats if needed
+                    console.log('Dashboard refreshed');
+                }
+            });
+        }
+        
+        setInterval(refreshDashboard, 30000);
+        
+        // Check for payment reminders
+        function checkReminders() {
+            $.ajax({
+                url: '{% url "core:check_payment_reminders" %}',
+                success: function(data) {
+                    if (data.has_reminders && !$('.alert.alert-warning').length) {
+                        showNotification('Payment Reminder', data.message, 'warning');
+                    }
+                }
+            });
+        }
+        
+        // Check every 5 minutes
+        setInterval(checkReminders, 300000);
+        checkReminders();
+        
+        function showNotification(title, message, type) {
+            // Create notification element
+            var notification = $(
+                '<div class="alert alert-' + type + ' alert-dismissible fade show" role="alert">' +
+                '<strong>' + title + '</strong> ' + message +
+                '<button type="button" class="btn-close" data-bs-dismiss="alert"></button>' +
+                '</div>'
+            );
+            
+            // Insert after header
+            $('.border-bottom').after(notification);
+            
+            // Auto remove after 10 seconds
+            setTimeout(function() {
+                notification.alert('close');
+            }, 10000);
+        }
+        
+        // Progress bar animation
+        $('.progress-bar').each(function() {
+            var width = $(this).attr('style').match(/width: (\d+)%/);
+            if (width) {
+                $(this).css('width', '0%').animate({
+                    width: width[1] + '%'
+                }, 1000);
+            }
+        });
+    });
+</script>
+{% endblock %}

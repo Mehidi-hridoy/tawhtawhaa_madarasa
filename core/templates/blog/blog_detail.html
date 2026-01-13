@@ -1,0 +1,288 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <!-- Breadcrumb -->
+    <nav aria-label="breadcrumb" class="mb-4">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'core:home' %}">Home</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'core:blog' %}">Blog</a></li>
+            <li class="breadcrumb-item active">{{ post.title|truncatewords:3 }}</li>
+        </ol>
+    </nav>
+
+    <div class="row">
+        <!-- Main Content -->
+        <div class="col-lg-8">
+            <article>
+                <!-- Article Header -->
+                <div class="mb-5">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <span class="badge bg-primary py-2 px-3">
+                            {{ post.get_category_display }}
+                        </span>
+                        <span class="text-muted">
+                            <i class="far fa-calendar me-1"></i>
+                            {{ post.published_at|date:"F d, Y" }}
+                        </span>
+                    </div>
+                    
+                    <h1 class="fw-bold mb-4">{{ post.title }}</h1>
+                    
+                    <div class="d-flex align-items-center mb-4">
+                        <div class="d-flex align-items-center me-4">
+                            <i class="fas fa-eye text-muted me-2"></i>
+                            <span class="text-muted">{{ post.views }} views</span>
+                        </div>
+                        <div class="d-flex align-items-center">
+                            <i class="fas fa-heart text-muted me-2"></i>
+                            <span class="text-muted">{{ post.likes }} likes</span>
+                        </div>
+                    </div>
+                    
+                    {% if post.featured_image %}
+                    <img src="{{ post.featured_image.url }}" 
+                         class="img-fluid rounded-3 mb-4" 
+                         alt="{{ post.title }}"
+                         style="max-height: 400px; object-fit: cover; width: 100%;">
+                    {% endif %}
+                </div>
+
+                <!-- Article Content -->
+                <div class="article-content mb-5">
+                    {{ post.content|safe }}
+                </div>
+
+                <!-- Article Footer -->
+                <div class="border-top pt-4 mb-5">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div class="d-flex align-items-center">
+                            <div class="me-3">
+                                <i class="fas fa-user-circle fa-2x text-primary"></i>
+                            </div>
+                            <div>
+                                <h6 class="fw-bold mb-0">{{ post.author.get_full_name }}</h6>
+                                <small class="text-muted">Author</small>
+                            </div>
+                        </div>
+                        <div class="d-flex gap-2">
+                            <button class="btn btn-outline-primary">
+                                <i class="fas fa-share-alt me-2"></i>Share
+                            </button>
+                            <button class="btn btn-outline-danger" id="likeBtn">
+                                <i class="fas fa-heart me-2"></i>Like
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tags -->
+                {% if post.tags %}
+                <div class="mb-5">
+                    <h6 class="fw-bold mb-3">Tags:</h6>
+                    <div class="d-flex flex-wrap gap-2">
+                        {% for tag in post.tags.split %}
+                        <span class="badge bg-light text-dark py-2 px-3">
+                            {{ tag }}
+                        </span>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+
+                <!-- Related Articles -->
+                {% if related_posts %}
+                <div class="mb-5">
+                    <h4 class="fw-bold mb-4">Related Articles</h4>
+                    <div class="row g-4">
+                        {% for related_post in related_posts %}
+                        <div class="col-md-6">
+                            <div class="card border-0 shadow-sm h-100">
+                                {% if related_post.featured_image %}
+                                <img src="{{ related_post.featured_image.url }}" 
+                                     class="card-img-top" 
+                                     alt="{{ related_post.title }}"
+                                     style="height: 150px; object-fit: cover;">
+                                {% endif %}
+                                <div class="card-body">
+                                    <h6 class="fw-bold mb-2">
+                                        <a href="{% url 'core:blog_detail' related_post.slug %}" 
+                                           class="text-decoration-none">
+                                            {{ related_post.title|truncatewords:6 }}
+                                        </a>
+                                    </h6>
+                                    <p class="text-muted small mb-0">
+                                        {{ related_post.excerpt|truncatewords:10 }}
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+            </article>
+        </div>
+
+        <!-- Sidebar -->
+        <div class="col-lg-4">
+            <!-- About Author -->
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-body">
+                    <h5 class="fw-bold mb-4">About the Author</h5>
+                    <div class="d-flex align-items-center mb-3">
+                        <div class="me-3">
+                            <i class="fas fa-user-circle fa-3x text-primary"></i>
+                        </div>
+                        <div>
+                            <h6 class="fw-bold mb-0">{{ post.author.get_full_name }}</h6>
+                            <small class="text-muted">Islamic Scholar & Teacher</small>
+                        </div>
+                    </div>
+                    <p class="text-muted small">
+                        {{ post.author.student_profile.bio|default:"An experienced Islamic scholar dedicated to spreading authentic knowledge."|truncatewords:30 }}
+                    </p>
+                </div>
+            </div>
+
+            <!-- Categories -->
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-body">
+                    <h5 class="fw-bold mb-4">Categories</h5>
+                    <div class="list-group list-group-flush">
+                        {% for value, label in post.CATEGORIES %}
+                        <a href="{% url 'core:blog' %}?category={{ value }}" 
+                           class="list-group-item list-group-item-action border-0 d-flex justify-content-between align-items-center">
+                            {{ label }}
+                            <span class="badge bg-primary rounded-pill">
+                                {% if value == post.category %}
+                                1
+                                {% else %}
+                                0
+                                {% endif %}
+                            </span>
+                        </a>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Popular Articles -->
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-body">
+                    <h5 class="fw-bold mb-4">Popular Articles</h5>
+                    {% for popular_post in recent_posts|slice:":3" %}
+                    <div class="mb-3 pb-3 {% if not forloop.last %}border-bottom{% endif %}">
+                        <h6 class="fw-bold mb-2">
+                            <a href="{% url 'core:blog_detail' popular_post.slug %}" 
+                               class="text-decoration-none">
+                                {{ popular_post.title|truncatewords:5 }}
+                            </a>
+                        </h6>
+                        <div class="d-flex justify-content-between">
+                            <small class="text-muted">
+                                <i class="far fa-calendar me-1"></i>
+                                {{ popular_post.published_at|date:"d M" }}
+                            </small>
+                            <small class="text-muted">
+                                <i class="fas fa-eye me-1"></i>
+                                {{ popular_post.views }}
+                            </small>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- Call to Action -->
+            <div class="card border-0 shadow-sm bg-primary text-white">
+                <div class="card-body text-center">
+                    <i class="fas fa-book fa-3x mb-3"></i>
+                    <h5 class="fw-bold mb-3">Ready to Learn?</h5>
+                    <p class="small mb-4">
+                        Join our courses to deepen your Islamic knowledge.
+                    </p>
+                    <a href="{% url 'core:courses' %}" class="btn btn-light">
+                        Explore Courses
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    $(document).ready(function() {
+        // Like button functionality
+        $('#likeBtn').click(function() {
+            var $this = $(this);
+            var postId = '{{ post.id }}';
+            
+            $.ajax({
+                url: '/api/blog/like/' + postId + '/',
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': '{{ csrf_token }}'
+                },
+                success: function(response) {
+                    if (response.liked) {
+                        $this.html('<i class="fas fa-heart me-2"></i>Liked');
+                        $this.removeClass('btn-outline-danger').addClass('btn-danger');
+                    } else {
+                        $this.html('<i class="fas fa-heart me-2"></i>Like');
+                        $this.removeClass('btn-danger').addClass('btn-outline-danger');
+                    }
+                }
+            });
+        });
+
+        // Share functionality
+        $('button:contains("Share")').click(function() {
+            var url = window.location.href;
+            var title = '{{ post.title }}';
+            
+            if (navigator.share) {
+                navigator.share({
+                    title: title,
+                    url: url
+                });
+            } else {
+                // Fallback copy to clipboard
+                navigator.clipboard.writeText(url).then(function() {
+                    alert('Link copied to clipboard!');
+                });
+            }
+        });
+
+        // Table of contents generation
+        var headings = $('.article-content h2, .article-content h3');
+        if (headings.length > 0) {
+            var toc = $('<div class="card border-0 shadow-sm mb-4"><div class="card-body"><h5 class="fw-bold mb-3">Table of Contents</h5><ul class="list-unstyled"></ul></div></div>');
+            var tocList = toc.find('ul');
+            
+            headings.each(function(index) {
+                var heading = $(this);
+                var headingText = heading.text();
+                var headingId = 'heading-' + index;
+                
+                heading.attr('id', headingId);
+                
+                tocList.append(
+                    '<li class="mb-2">' +
+                    '<a href="#' + headingId + '" class="text-decoration-none text-muted">' +
+                    headingText +
+                    '</a>' +
+                    '</li>'
+                );
+            });
+            
+            toc.insertBefore('.article-content');
+        }
+    });
+</script>
+{% endblock %}

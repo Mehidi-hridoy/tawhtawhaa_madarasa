@@ -1,0 +1,564 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load humanize %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <!-- Sidebar (same as overview.html) -->
+        <nav id="sidebar" class="col-md-3 col-lg-2 d-md-block bg-light sidebar collapse">
+            <!-- ... same sidebar as overview.html ... -->
+        </nav>
+        
+        <!-- Main Content -->
+        <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4">
+            <!-- Header -->
+            <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+                <h1 class="h2 fw-bold">Payment History</h1>
+                <div class="btn-toolbar mb-2 mb-md-0">
+                    <a href="{% url 'core:my_courses' %}" class="btn btn-sm btn-outline-primary me-2">
+                        <i class="fas fa-book me-2"></i>My Courses
+                    </a>
+                    <button class="btn btn-sm btn-outline-secondary" onclick="window.print()">
+                        <i class="fas fa-print me-2"></i>Print
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Payment Summary -->
+            <div class="row mb-4">
+                <div class="col-xl-3 col-md-6 mb-4">
+                    <div class="card border-start border-success border-4 shadow-sm h-100 py-2">
+                        <div class="card-body">
+                            <div class="row no-gutters align-items-center">
+                                <div class="col mr-2">
+                                    <div class="text-xs fw-bold text-success text-uppercase mb-1">
+                                        Total Paid
+                                    </div>
+                                    <div class="h5 mb-0 fw-bold">৳{{ total_paid|floatformat:0|intcomma }}</div>
+                                    <div class="mt-2 mb-0">
+                                        <span class="badge bg-success">Verified Payments</span>
+                                    </div>
+                                </div>
+                                <div class="col-auto">
+                                    <i class="fas fa-money-check-alt fa-2x text-gray-300"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-xl-3 col-md-6 mb-4">
+                    <div class="card border-start border-warning border-4 shadow-sm h-100 py-2">
+                        <div class="card-body">
+                            <div class="row no-gutters align-items-center">
+                                <div class="col mr-2">
+                                    <div class="text-xs fw-bold text-warning text-uppercase mb-1">
+                                        Total Due
+                                    </div>
+                                    <div class="h5 mb-0 fw-bold">৳{{ total_due|floatformat:0|intcomma }}</div>
+                                    <div class="mt-2 mb-0">
+                                        <a href="#pendingPayments" class="small text-decoration-none">
+                                            View Details
+                                        </a>
+                                    </div>
+                                </div>
+                                <div class="col-auto">
+                                    <i class="fas fa-exclamation-triangle fa-2x text-gray-300"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-xl-3 col-md-6 mb-4">
+                    <div class="card border-start border-primary border-4 shadow-sm h-100 py-2">
+                        <div class="card-body">
+                            <div class="row no-gutters align-items-center">
+                                <div class="col mr-2">
+                                    <div class="text-xs fw-bold text-primary text-uppercase mb-1">
+                                        Total Payments
+                                    </div>
+                                    <div class="h5 mb-0 fw-bold">{{ payments.count }}</div>
+                                    <div class="mt-2 mb-0">
+                                        <span class="badge bg-primary">All Transactions</span>
+                                    </div>
+                                </div>
+                                <div class="col-auto">
+                                    <i class="fas fa-receipt fa-2x text-gray-300"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-xl-3 col-md-6 mb-4">
+                    <div class="card border-start border-info border-4 shadow-sm h-100 py-2">
+                        <div class="card-body">
+                            <div class="row no-gutters align-items-center">
+                                <div class="col mr-2">
+                                    <div class="text-xs fw-bold text-info text-uppercase mb-1">
+                                        Payment Methods
+                                    </div>
+                                    <div class="h5 mb-0 fw-bold">4</div>
+                                    <div class="mt-2 mb-0">
+                                        <span class="badge bg-info">bKash, Nagad, Rocket, Bank</span>
+                                    </div>
+                                </div>
+                                <div class="col-auto">
+                                    <i class="fas fa-credit-card fa-2x text-gray-300"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Payment Tabs -->
+            <ul class="nav nav-tabs mb-4" id="paymentTabs" role="tablist">
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link active" id="all-tab" data-bs-toggle="tab" data-bs-target="#all">
+                        All Payments ({{ payments.count }})
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="verified-tab" data-bs-toggle="tab" data-bs-target="#verified">
+                        Verified ({{ payments.filter.is_verified=True|length }})
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="pending-tab" data-bs-toggle="tab" data-bs-target="#pending" id="pendingPayments">
+                        Pending ({{ payments.filter.is_verified=False|length }})
+                    </button>
+                </li>
+            </ul>
+            
+            <!-- Payment Content -->
+            <div class="tab-content" id="paymentTabsContent">
+                <!-- All Payments -->
+                <div class="tab-pane fade show active" id="all" role="tabpanel">
+                    {% if payments %}
+                    <div class="card shadow-sm">
+                        <div class="card-body">
+                            <div class="table-responsive">
+                                <table class="table table-hover">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>Transaction ID</th>
+                                            <th>Course</th>
+                                            <th>Amount</th>
+                                            <th>Method</th>
+                                            <th>Date</th>
+                                            <th>Status</th>
+                                            <th>Action</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for payment in payments %}
+                                        <tr>
+                                            <td>
+                                                <span class="fw-bold">{{ payment.transaction_id }}</span>
+                                                {% if payment.installment_number > 1 %}
+                                                <br>
+                                                <small class="text-muted">Installment {{ payment.installment_number }}</small>
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                <strong>{{ payment.enrollment.course.name }}</strong>
+                                                <br>
+                                                <small class="text-muted">{{ payment.enrollment.course.get_category_display }}</small>
+                                            </td>
+                                            <td>
+                                                <h6 class="fw-bold text-success mb-0">৳{{ payment.amount|floatformat:0|intcomma }}</h6>
+                                            </td>
+                                            <td>
+                                                <span class="badge bg-light text-dark">
+                                                    <i class="fas fa-{{ payment.payment_method }} me-1"></i>
+                                                    {{ payment.get_payment_method_display }}
+                                                </span>
+                                            </td>
+                                            <td>
+                                                <small class="text-muted">{{ payment.payment_date|date:"d M, Y" }}</small>
+                                                <br>
+                                                <small class="text-muted">{{ payment.payment_date|time:"h:i A" }}</small>
+                                            </td>
+                                            <td>
+                                                {% if payment.is_verified %}
+                                                <span class="badge bg-success">
+                                                    <i class="fas fa-check-circle me-1"></i>Verified
+                                                </span>
+                                                <br>
+                                                <small class="text-muted">{{ payment.verified_at|date:"d M" }}</small>
+                                                {% else %}
+                                                <span class="badge bg-warning">
+                                                    <i class="fas fa-clock me-1"></i>Pending
+                                                </span>
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                <button class="btn btn-sm btn-outline-primary" 
+                                                        data-bs-toggle="modal" 
+                                                        data-bs-target="#paymentModal{{ payment.id }}">
+                                                    Details
+                                                </button>
+                                            </td>
+                                        </tr>
+                                        
+                                        <!-- Payment Modal -->
+                                        <div class="modal fade" id="paymentModal{{ payment.id }}" tabindex="-1">
+                                            <div class="modal-dialog">
+                                                <div class="modal-content">
+                                                    <div class="modal-header">
+                                                        <h5 class="modal-title">Payment Details</h5>
+                                                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                                    </div>
+                                                    <div class="modal-body">
+                                                        <div class="row mb-3">
+                                                            <div class="col-6">
+                                                                <small class="text-muted d-block">Transaction ID</small>
+                                                                <strong>{{ payment.transaction_id }}</strong>
+                                                            </div>
+                                                            <div class="col-6">
+                                                                <small class="text-muted d-block">Amount</small>
+                                                                <strong class="text-success">৳{{ payment.amount }}</strong>
+                                                            </div>
+                                                        </div>
+                                                        <div class="row mb-3">
+                                                            <div class="col-6">
+                                                                <small class="text-muted d-block">Course</small>
+                                                                <strong>{{ payment.enrollment.course.name }}</strong>
+                                                            </div>
+                                                            <div class="col-6">
+                                                                <small class="text-muted d-block">Payment Method</small>
+                                                                <strong>{{ payment.get_payment_method_display }}</strong>
+                                                            </div>
+                                                        </div>
+                                                        <div class="row mb-3">
+                                                            <div class="col-6">
+                                                                <small class="text-muted d-block">Payment Date</small>
+                                                                <strong>{{ payment.payment_date|date:"F d, Y" }}</strong>
+                                                            </div>
+                                                            <div class="col-6">
+                                                                <small class="text-muted d-block">Status</small>
+                                                                <span class="badge bg-{% if payment.is_verified %}success{% else %}warning{% endif %}">
+                                                                    {% if payment.is_verified %}Verified{% else %}Pending Verification{% endif %}
+                                                                </span>
+                                                            </div>
+                                                        </div>
+                                                        {% if payment.reference_number %}
+                                                        <div class="row mb-3">
+                                                            <div class="col-12">
+                                                                <small class="text-muted d-block">Reference Number</small>
+                                                                <strong>{{ payment.reference_number }}</strong>
+                                                            </div>
+                                                        </div>
+                                                        {% endif %}
+                                                        {% if payment.notes %}
+                                                        <div class="row">
+                                                            <div class="col-12">
+                                                                <small class="text-muted d-block">Notes</small>
+                                                                <p class="mb-0">{{ payment.notes }}</p>
+                                                            </div>
+                                                        </div>
+                                                        {% endif %}
+                                                    </div>
+                                                    <div class="modal-footer">
+                                                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                                                        {% if payment.is_verified %}
+                                                        <button class="btn btn-primary" onclick="printReceipt('{{ payment.id }}')">
+                                                            <i class="fas fa-print me-2"></i>Print Receipt
+                                                        </button>
+                                                        {% endif %}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                            
+                            <!-- Pagination -->
+                            <nav aria-label="Payment pagination">
+                                <ul class="pagination justify-content-center">
+                                    <li class="page-item disabled">
+                                        <span class="page-link">Previous</span>
+                                    </li>
+                                    <li class="page-item active">
+                                        <span class="page-link">1</span>
+                                    </li>
+                                    <li class="page-item">
+                                        <a class="page-link" href="#">2</a>
+                                    </li>
+                                    <li class="page-item">
+                                        <a class="page-link" href="#">3</a>
+                                    </li>
+                                    <li class="page-item">
+                                        <a class="page-link" href="#">Next</a>
+                                    </li>
+                                </ul>
+                            </nav>
+                        </div>
+                    </div>
+                    {% else %}
+                    <div class="text-center py-5">
+                        <i class="fas fa-receipt fa-4x text-muted mb-3"></i>
+                        <h4 class="fw-bold mb-3">No Payment History</h4>
+                        <p class="text-muted mb-4">You haven't made any payments yet.</p>
+                        <a href="{% url 'core:my_courses' %}" class="btn btn-primary">
+                            <i class="fas fa-book me-2"></i>View Courses to Pay
+                        </a>
+                    </div>
+                    {% endif %}
+                </div>
+                
+                <!-- Verified Payments -->
+                <div class="tab-pane fade" id="verified" role="tabpanel">
+                    <!-- Similar structure for verified payments -->
+                </div>
+                
+                <!-- Pending Payments -->
+                <div class="tab-pane fade" id="pending" role="tabpanel">
+                    <!-- Similar structure for pending payments -->
+                </div>
+            </div>
+            
+            <!-- Due Payments Section -->
+            {% with due_enrollments=enrollments.filter.payment_status__in='pending,partial' %}
+            {% if due_enrollments %}
+            <div class="card border-warning shadow-sm mt-4">
+                <div class="card-header bg-warning bg-opacity-10 border-warning">
+                    <h5 class="fw-bold mb-0">
+                        <i class="fas fa-exclamation-circle me-2 text-warning"></i>Due Payments
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>Course</th>
+                                    <th>Due Amount</th>
+                                    <th>Due Date</th>
+                                    <th>Payment Status</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for enrollment in due_enrollments %}
+                                <tr>
+                                    <td>
+                                        <strong>{{ enrollment.course.name }}</strong>
+                                        <br>
+                                        <small class="text-muted">{{ enrollment.course.get_category_display }}</small>
+                                    </td>
+                                    <td>
+                                        <h6 class="fw-bold text-danger mb-0">৳{{ enrollment.due_amount|floatformat:0|intcomma }}</h6>
+                                        <small class="text-muted">Total: ৳{{ enrollment.course_fee|floatformat:0|intcomma }}</small>
+                                    </td>
+                                    <td>
+                                        {% if enrollment.next_installment_date %}
+                                        <strong>{{ enrollment.next_installment_date|date:"d M, Y" }}</strong>
+                                        <br>
+                                        <small class="text-muted">
+                                            {% with days=0 %}
+                                            {% now "Y-m-d" as today %}
+                                            {{ enrollment.next_installment_date|timeuntil:today }}
+                                            {% endwith %}
+                                            remaining
+                                        </small>
+                                        {% else %}
+                                        <span class="text-muted">No due date</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-{{ enrollment.payment_status }}">
+                                            {{ enrollment.get_payment_status_display }}
+                                        </span>
+                                        <br>
+                                        <small class="text-muted">
+                                            Paid: ৳{{ enrollment.total_paid|floatformat:0|intcomma }}
+                                        </small>
+                                    </td>
+                                    <td>
+                                        <a href="{% url 'core:make_payment' enrollment.id %}" 
+                                           class="btn btn-sm btn-warning">
+                                            <i class="fas fa-money-bill-wave me-2"></i>Pay Now
+                                        </a>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+            {% endwith %}
+            
+            <!-- Payment Instructions -->
+            <div class="card shadow-sm mt-4">
+                <div class="card-body">
+                    <h5 class="fw-bold mb-4">
+                        <i class="fas fa-info-circle text-primary me-2"></i>Payment Instructions
+                    </h5>
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <div class="card border">
+                                <div class="card-body text-center">
+                                    <div class="mb-3">
+                                        <img src="{% static 'images/bkash.png' %}" alt="bKash" height="40">
+                                    </div>
+                                    <h6 class="fw-bold">bKash Payment</h6>
+                                    <p class="small text-muted mb-2">Send money to: <strong>01740433580</strong></p>
+                                    <p class="small text-muted mb-0">Reference: <strong>COURSE-CODE</strong></p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <div class="card border">
+                                <div class="card-body text-center">
+                                    <div class="mb-3">
+                                        <img src="{% static 'images/nagad.png' %}" alt="Nagad" height="40">
+                                    </div>
+                                    <h6 class="fw-bold">Nagad Payment</h6>
+                                    <p class="small text-muted mb-2">Send money to: <strong>01740433580</strong></p>
+                                    <p class="small text-muted mb-0">Reference: <strong>COURSE-CODE</strong></p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <div class="card border">
+                                <div class="card-body text-center">
+                                    <div class="mb-3">
+                                        <i class="fas fa-university fa-3x text-primary"></i>
+                                    </div>
+                                    <h6 class="fw-bold">Bank Transfer</h6>
+                                    <p class="small text-muted mb-0">
+                                        Islami Bank Bangladesh Ltd.<br>
+                                        A/C: 1234567890<br>
+                                        Branch: Rangpur Main
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .nav-tabs .nav-link {
+        color: #666;
+        font-weight: 500;
+    }
+    
+    .nav-tabs .nav-link.active {
+        color: #1a5fb4;
+        border-bottom: 3px solid #1a5fb4;
+    }
+    
+    .badge.bg-light {
+        border: 1px solid #dee2e6;
+    }
+    
+    .badge.bg-pending {
+        background-color: #ffc107;
+        color: #000;
+    }
+    
+    .badge.bg-partial {
+        background-color: #fd7e14;
+        color: #000;
+    }
+    
+    .badge.bg-paid {
+        background-color: #28a745;
+        color: #fff;
+    }
+    
+    @media print {
+        #sidebar, .btn-toolbar, .btn, .nav-tabs {
+            display: none !important;
+        }
+        
+        main {
+            margin-left: 0 !important;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    $(document).ready(function() {
+        // Print receipt function
+        window.printReceipt = function(paymentId) {
+            window.open('/dashboard/payment-receipt/' + paymentId + '/', '_blank');
+        };
+        
+        // Filter payments by status
+        $('#paymentTabs button').click(function() {
+            var tabId = $(this).attr('data-bs-target').replace('#', '');
+            localStorage.setItem('activePaymentTab', tabId);
+        });
+        
+        // Restore active tab
+        var activeTab = localStorage.getItem('activePaymentTab');
+        if (activeTab) {
+            $('button[data-bs-target="#' + activeTab + '"]').tab('show');
+        }
+        
+        // Search functionality
+        $('#paymentSearch').on('keyup', function() {
+            var value = $(this).val().toLowerCase();
+            $('#paymentTable tbody tr').filter(function() {
+                $(this).toggle($(this).text().toLowerCase().indexOf(value) > -1);
+            });
+        });
+        
+        // Export to CSV
+        $('#exportPayments').click(function() {
+            var table = $('#paymentTable');
+            var headers = [];
+            var data = [];
+            
+            // Get headers
+            table.find('thead th').each(function() {
+                headers.push($(this).text());
+            });
+            
+            // Get data
+            table.find('tbody tr').each(function() {
+                var row = [];
+                $(this).find('td').each(function() {
+                    row.push($(this).text().trim());
+                });
+                data.push(row);
+            });
+            
+            // Convert to CSV
+            var csvContent = "data:text/csv;charset=utf-8,";
+            csvContent += headers.join(",") + "\n";
+            data.forEach(function(row) {
+                csvContent += row.join(",") + "\n";
+            });
+            
+            // Download
+            var encodedUri = encodeURI(csvContent);
+            var link = document.createElement("a");
+            link.setAttribute("href", encodedUri);
+            link.setAttribute("download", "payment_history.csv");
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        });
+    });
+</script>
+{% endblock %}

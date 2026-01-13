@@ -1,0 +1,6 @@
+services:
+  - type: web
+    name: tawhaa-madarasa
+    env: python
+    buildCommand: "./build.sh"
+    startCommand: "gunicorn tawhtawhaa_madarasa.wsgi:application"

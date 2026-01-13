@@ -1,0 +1,922 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{% url 'core:dashboard' %}">Dashboard</a></li>
+                    <li class="breadcrumb-item active" aria-current="page">Profile Settings</li>
+                </ol>
+            </nav>
+            <h1 class="h2 mb-1">Profile Settings</h1>
+            <p class="text-muted">Manage your account information and preferences</p>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Sidebar Navigation -->
+        <div class="col-lg-3 mb-4">
+            <div class="card border-0 shadow-sm sticky-top" style="top: 20px;">
+                <div class="card-body p-0">
+                    <div class="list-group list-group-flush">
+                        <a href="#personal-info" 
+                           class="list-group-item list-group-item-action border-0 active" 
+                           data-bs-toggle="tab">
+                            <i class="fas fa-user-circle me-2"></i>Personal Info
+                        </a>
+                        <a href="#security" 
+                           class="list-group-item list-group-item-action border-0" 
+                           data-bs-toggle="tab">
+                            <i class="fas fa-shield-alt me-2"></i>Security
+                        </a>
+                        <a href="#notifications" 
+                           class="list-group-item list-group-item-action border-0" 
+                           data-bs-toggle="tab">
+                            <i class="fas fa-bell me-2"></i>Notifications
+                        </a>
+                        {% if request.user.is_staff %}
+                        <a href="#admin-settings" 
+                           class="list-group-item list-group-item-action border-0 text-danger" 
+                           data-bs-toggle="tab">
+                            <i class="fas fa-cog me-2"></i>Admin Settings
+                        </a>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="col-lg-9">
+            <div class="tab-content">
+                <!-- Personal Info Tab -->
+                <div class="tab-pane fade show active" id="personal-info">
+                    <div class="card border-0 shadow-sm">
+                        <div class="card-header bg-white border-bottom">
+                            <h5 class="mb-0">
+                                <i class="fas fa-user-circle me-2 text-primary"></i>Personal Information
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            {% if messages %}
+                            {% for message in messages %}
+                            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                                <i class="fas {% if message.tags == 'success' %}fa-check-circle{% else %}fa-exclamation-circle{% endif %} me-2"></i>
+                                {{ message }}
+                                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                            </div>
+                            {% endfor %}
+                            {% endif %}
+
+                            <form method="post" enctype="multipart/form-data" novalidate id="profileForm">
+                                {% csrf_token %}
+                                <input type="hidden" name="update_profile" value="true">
+                                
+                                <!-- Profile Picture -->
+                                <div class="text-center mb-4">
+                                    <div class="profile-picture-wrapper position-relative d-inline-block">
+                                        {% if student and student.profile_picture %}
+                                        <img src="{{ student.profile_picture.url }}" 
+                                             alt="{{ user.get_full_name }}" 
+                                             class="rounded-circle border"
+                                             style="width: 150px; height: 150px; object-fit: cover;"
+                                             id="profileImage">
+                                        {% else %}
+                                        <div class="rounded-circle bg-light d-flex align-items-center justify-content-center"
+                                             style="width: 150px; height: 150px; border: 2px solid #dee2e6;">
+                                            <i class="fas fa-user text-muted" style="font-size: 60px;" id="profilePlaceholder"></i>
+                                        </div>
+                                        {% endif %}
+                                        <label for="id_profile_picture" class="btn btn-sm btn-primary rounded-circle position-absolute"
+                                               style="bottom: 10px; right: 10px; width: 40px; height: 40px; line-height: 40px; cursor: pointer;">
+                                            <i class="fas fa-camera"></i>
+                                        </label>
+                                        {{ student_form.profile_picture }}
+                                        {% if student_form.profile_picture.errors %}
+                                        <div class="invalid-feedback d-block text-center mt-2">
+                                            {{ student_form.profile_picture.errors.0 }}
+                                        </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+
+                                <!-- User Information -->
+                                <div class="row">
+                                    <div class="col-md-6 mb-3">
+                                        <label for="{{ user_form.first_name.id_for_label }}" class="form-label">
+                                            First Name <span class="text-danger">*</span>
+                                        </label>
+                                        {{ user_form.first_name }}
+                                        {% if user_form.first_name.errors %}
+                                        <div class="invalid-feedback d-block">
+                                            {{ user_form.first_name.errors.0 }}
+                                        </div>
+                                        {% endif %}
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label for="{{ user_form.last_name.id_for_label }}" class="form-label">
+                                            Last Name <span class="text-danger">*</span>
+                                        </label>
+                                        {{ user_form.last_name }}
+                                        {% if user_form.last_name.errors %}
+                                        <div class="invalid-feedback d-block">
+                                            {{ user_form.last_name.errors.0 }}
+                                        </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+
+                                <div class="row">
+                                    <div class="col-md-6 mb-3">
+                                        <label for="{{ user_form.email.id_for_label }}" class="form-label">
+                                            Email Address <span class="text-danger">*</span>
+                                        </label>
+                                        {{ user_form.email }}
+                                        {% if user_form.email.errors %}
+                                        <div class="invalid-feedback d-block">
+                                            {{ user_form.email.errors.0 }}
+                                        </div>
+                                        {% endif %}
+                                        <div class="form-text">
+                                            Your login email address
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label for="{{ student_form.phone.id_for_label }}" class="form-label">
+                                            Phone Number <span class="text-danger">*</span>
+                                        </label>
+                                        {{ student_form.phone }}
+                                        {% if student_form.phone.errors %}
+                                        <div class="invalid-feedback d-block">
+                                            {{ student_form.phone.errors.0 }}
+                                        </div>
+                                        {% endif %}
+                                        <div class="form-text">
+                                            Format: +8801XXXXXXXXX
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Student Information -->
+                                {% if student_form %}
+                                <hr class="my-4">
+                                <h6 class="mb-3">Student Information</h6>
+                                
+                                <div class="row">
+                                    <div class="col-md-6 mb-3">
+                                        <label for="{{ student_form.full_name.id_for_label }}" class="form-label">
+                                            Full Name (as per ID) <span class="text-danger">*</span>
+                                        </label>
+                                        {{ student_form.full_name }}
+                                        {% if student_form.full_name.errors %}
+                                        <div class="invalid-feedback d-block">
+                                            {{ student_form.full_name.errors.0 }}
+                                        </div>
+                                        {% endif %}
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label for="{{ student_form.date_of_birth.id_for_label }}" class="form-label">
+                                            Date of Birth <span class="text-danger">*</span>
+                                        </label>
+                                        {{ student_form.date_of_birth }}
+                                        {% if student_form.date_of_birth.errors %}
+                                        <div class="invalid-feedback d-block">
+                                            {{ student_form.date_of_birth.errors.0 }}
+                                        </div>
+                                        {% endif %}
+                                        <div class="form-text">
+                                            {{ student_form.date_of_birth.help_text }}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="row">
+                                    <div class="col-md-6 mb-3">
+                                        <label for="{{ student_form.gender.id_for_label }}" class="form-label">
+                                            Gender <span class="text-danger">*</span>
+                                        </label>
+                                        {{ student_form.gender }}
+                                        {% if student_form.gender.errors %}
+                                        <div class="invalid-feedback d-block">
+                                            {{ student_form.gender.errors.0 }}
+                                        </div>
+                                        {% endif %}
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label for="{{ student_form.country.id_for_label }}" class="form-label">
+                                            Country <span class="text-danger">*</span>
+                                        </label>
+                                        {{ student_form.country }}
+                                        {% if student_form.country.errors %}
+                                        <div class="invalid-feedback d-block">
+                                            {{ student_form.country.errors.0 }}
+                                        </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+
+                                <div class="row">
+                                    <div class="col-md-6 mb-3">
+                                        <label for="{{ student_form.city.id_for_label }}" class="form-label">
+                                            City <span class="text-danger">*</span>
+                                        </label>
+                                        {{ student_form.city }}
+                                        {% if student_form.city.errors %}
+                                        <div class="invalid-feedback d-block">
+                                            {{ student_form.city.errors.0 }}
+                                        </div>
+                                        {% endif %}
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label for="{{ student_form.address.id_for_label }}" class="form-label">
+                                            Address <span class="text-danger">*</span>
+                                        </label>
+                                        {{ student_form.address }}
+                                        {% if student_form.address.errors %}
+                                        <div class="invalid-feedback d-block">
+                                            {{ student_form.address.errors.0 }}
+                                        </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+
+                                <div class="row">
+                                    <div class="col-md-6 mb-3">
+                                        <label for="{{ student_form.occupation.id_for_label }}" class="form-label">
+                                            Occupation
+                                        </label>
+                                        {{ student_form.occupation }}
+                                        {% if student_form.occupation.errors %}
+                                        <div class="invalid-feedback d-block">
+                                            {{ student_form.occupation.errors.0 }}
+                                        </div>
+                                        {% endif %}
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label for="{{ student_form.education.id_for_label }}" class="form-label">
+                                            Education Level
+                                        </label>
+                                        {{ student_form.education }}
+                                        {% if student_form.education.errors %}
+                                        <div class="invalid-feedback d-block">
+                                            {{ student_form.education.errors.0 }}
+                                        </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+
+                                <div class="row">
+                                    <div class="col-md-6 mb-3">
+                                        <label for="{{ student_form.preferred_time_slot.id_for_label }}" class="form-label">
+                                            Preferred Time Slot
+                                        </label>
+                                        {{ student_form.preferred_time_slot }}
+                                        {% if student_form.preferred_time_slot.errors %}
+                                        <div class="invalid-feedback d-block">
+                                            {{ student_form.preferred_time_slot.errors.0 }}
+                                        </div>
+                                        {% endif %}
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label for="{{ student_form.preferred_language.id_for_label }}" class="form-label">
+                                            Preferred Language
+                                        </label>
+                                        {{ student_form.preferred_language }}
+                                        {% if student_form.preferred_language.errors %}
+                                        <div class="invalid-feedback d-block">
+                                            {{ student_form.preferred_language.errors.0 }}
+                                        </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label for="{{ student_form.previous_islamic_studies.id_for_label }}" class="form-label">
+                                        Previous Islamic Studies Experience
+                                    </label>
+                                    {{ student_form.previous_islamic_studies }}
+                                    {% if student_form.previous_islamic_studies.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {{ student_form.previous_islamic_studies.errors.0 }}
+                                    </div>
+                                    {% endif %}
+                                    <div class="form-text">
+                                        Briefly describe any previous Islamic studies experience
+                                    </div>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label for="{{ student_form.emergency_contact.id_for_label }}" class="form-label">
+                                        Emergency Contact <span class="text-danger">*</span>
+                                    </label>
+                                    {{ student_form.emergency_contact }}
+                                    {% if student_form.emergency_contact.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {{ student_form.emergency_contact.errors.0 }}
+                                    </div>
+                                    {% endif %}
+                                    <div class="form-text">
+                                        Phone number of emergency contact person
+                                    </div>
+                                </div>
+                                {% endif %}
+
+                                <div class="d-flex justify-content-between mt-4">
+                                    <a href="{% url 'core:dashboard' %}" class="btn btn-outline-secondary">
+                                        <i class="fas fa-arrow-left me-2"></i>Back to Dashboard
+                                    </a>
+                                    <button type="submit" class="btn btn-primary">
+                                        <i class="fas fa-save me-2"></i>Save Changes
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Security Tab -->
+                <div class="tab-pane fade" id="security">
+                    <div class="card border-0 shadow-sm">
+                        <div class="card-header bg-white border-bottom">
+                            <h5 class="mb-0">
+                                <i class="fas fa-shield-alt me-2 text-warning"></i>Security Settings
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <!-- Password Change -->
+                            <div class="mb-5">
+                                <h6 class="mb-3">Change Password</h6>
+                                <form method="post" id="passwordForm">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="change_password" value="true">
+                                    
+                                    <div class="row g-3">
+                                        <div class="col-md-4">
+                                            <label for="id_old_password" class="form-label">Current Password</label>
+                                            <input type="password" name="old_password" class="form-control" id="id_old_password" required>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <label for="id_new_password1" class="form-label">New Password</label>
+                                            <input type="password" name="new_password1" class="form-control" id="id_new_password1" required>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <label for="id_new_password2" class="form-label">Confirm Password</label>
+                                            <input type="password" name="new_password2" class="form-control" id="id_new_password2" required>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Password Requirements -->
+                                    <div class="mt-3">
+                                        <small class="text-muted">Password requirements:</small>
+                                        <ul class="small text-muted mb-3">
+                                            <li>Minimum 8 characters</li>
+                                            <li>Cannot be too similar to your other personal information</li>
+                                            <li>Cannot be a commonly used password</li>
+                                            <li>Cannot be entirely numeric</li>
+                                        </ul>
+                                    </div>
+                                    
+                                    <div class="mt-3">
+                                        <button type="submit" class="btn btn-warning">
+                                            <i class="fas fa-key me-2"></i>Change Password
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
+
+                            <hr>
+
+                            <!-- Two-Factor Authentication -->
+                            <div class="mb-4">
+                                <h6 class="mb-3">Two-Factor Authentication</h6>
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <i class="fas fa-mobile-alt fa-2x text-muted me-3"></i>
+                                        <span>Add an extra layer of security to your account</span>
+                                    </div>
+                                    <div class="form-check form-switch">
+                                        <input class="form-check-input" type="checkbox" id="twoFactorSwitch" disabled>
+                                        <label class="form-check-label" for="twoFactorSwitch"></label>
+                                    </div>
+                                </div>
+                                <div class="mt-2">
+                                    <small class="text-muted">
+                                        <i class="fas fa-info-circle me-1"></i>
+                                        Two-factor authentication will be available soon
+                                    </small>
+                                </div>
+                            </div>
+
+                            <hr>
+
+                            <!-- Login Activity -->
+                            <div>
+                                <h6 class="mb-3">Recent Login Activity</h6>
+                                <div class="table-responsive">
+                                    <table class="table table-sm">
+                                        <thead>
+                                            <tr>
+                                                <th>Date & Time</th>
+                                                <th>IP Address</th>
+                                                <th>Device</th>
+                                                <th>Status</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr>
+                                                <td>Just now</td>
+                                                <td>{{ request.META.REMOTE_ADDR }}</td>
+                                                <td>Current Session</td>
+                                                <td><span class="badge bg-success">Active</span></td>
+                                            </tr>
+                                            <tr>
+                                                <td>{{ user.last_login|date:"M d, Y H:i"|default:"Never" }}</td>
+                                                <td>Previous IP</td>
+                                                <td>Previous Device</td>
+                                                <td><span class="badge bg-secondary">Previous</span></td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Notifications Tab -->
+                <div class="tab-pane fade" id="notifications">
+                    <div class="card border-0 shadow-sm">
+                        <div class="card-header bg-white border-bottom">
+                            <h5 class="mb-0">
+                                <i class="fas fa-bell me-2 text-info"></i>Notification Preferences
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <form method="post" action="#">
+                                {% csrf_token %}
+                                
+                                <div class="mb-4">
+                                    <h6 class="mb-3">Email Notifications</h6>
+                                    <div class="list-group list-group-flush">
+                                        <div class="list-group-item border-0 px-0">
+                                            <div class="form-check form-switch">
+                                                <input class="form-check-input" type="checkbox" id="courseUpdates" checked>
+                                                <label class="form-check-label" for="courseUpdates">
+                                                    <strong>Course Updates</strong>
+                                                    <small class="d-block text-muted">Get notified about new lessons and course announcements</small>
+                                                </label>
+                                            </div>
+                                        </div>
+                                        <div class="list-group-item border-0 px-0">
+                                            <div class="form-check form-switch">
+                                                <input class="form-check-input" type="checkbox" id="assignmentReminders" checked>
+                                                <label class="form-check-label" for="assignmentReminders">
+                                                    <strong>Assignment Reminders</strong>
+                                                    <small class="d-block text-muted">Receive reminders for upcoming assignments</small>
+                                                </label>
+                                            </div>
+                                        </div>
+                                        <div class="list-group-item border-0 px-0">
+                                            <div class="form-check form-switch">
+                                                <input class="form-check-input" type="checkbox" id="liveSessionAlerts" checked>
+                                                <label class="form-check-label" for="liveSessionAlerts">
+                                                    <strong>Live Session Alerts</strong>
+                                                    <small class="d-block text-muted">Get notified about upcoming live sessions</small>
+                                                </label>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="mb-4">
+                                    <h6 class="mb-3">SMS Notifications</h6>
+                                    <div class="list-group list-group-flush">
+                                        <div class="list-group-item border-0 px-0">
+                                            <div class="form-check form-switch">
+                                                <input class="form-check-input" type="checkbox" id="smsClassReminders" checked>
+                                                <label class="form-check-label" for="smsClassReminders">
+                                                    <strong>Class Reminders</strong>
+                                                    <small class="d-block text-muted">Receive SMS reminders for classes</small>
+                                                </label>
+                                            </div>
+                                        </div>
+                                        <div class="list-group-item border-0 px-0">
+                                            <div class="form-check form-switch">
+                                                <input class="form-check-input" type="checkbox" id="smsPaymentReminders">
+                                                <label class="form-check-label" for="smsPaymentReminders">
+                                                    <strong>Payment Reminders</strong>
+                                                    <small class="d-block text-muted">Receive SMS reminders for payments</small>
+                                                </label>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="text-end">
+                                    <button type="submit" class="btn btn-primary">
+                                        <i class="fas fa-save me-2"></i>Save Preferences
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Admin Settings Tab (Only for Superusers) -->
+                {% if request.user.is_staff %}
+                <div class="tab-pane fade" id="admin-settings">
+                    <div class="card border-0 shadow-sm">
+                        <div class="card-header bg-white border-bottom">
+                            <h5 class="mb-0">
+                                <i class="fas fa-cog me-2 text-danger"></i>Admin Settings
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <!-- Admin Quick Actions -->
+                            <div class="row g-4 mb-4">
+                                <div class="col-md-4">
+                                    <div class="card border-0 bg-danger text-white shadow-sm">
+                                        <div class="card-body text-center">
+                                            <i class="fas fa-users-cog fa-2x mb-3"></i>
+                                            <h6 class="mb-2">User Management</h6>
+                                            <a href="{% url 'admin:auth_user_changelist' %}" class="btn btn-light btn-sm" target="_blank">
+                                                Manage Users
+                                            </a>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="card border-0 bg-primary text-white shadow-sm">
+                                        <div class="card-body text-center">
+                                            <i class="fas fa-book fa-2x mb-3"></i>
+                                            <h6 class="mb-2">Course Management</h6>
+                                            <a href="#" class="btn btn-light btn-sm" target="_blank">
+                                                Manage Courses
+                                            </a>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="card border-0 bg-success text-white shadow-sm">
+                                        <div class="card-body text-center">
+                                            <i class="fas fa-chart-bar fa-2x mb-3"></i>
+                                            <h6 class="mb-2">Analytics</h6>
+                                            <a href="#" class="btn btn-light btn-sm">
+                                                View Analytics
+                                            </a>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Admin Statistics -->
+                            <div class="mb-4">
+                                <h6 class="mb-3">System Statistics</h6>
+                                <div class="row g-3">
+                                    <div class="col-md-3">
+                                        <div class="card border-0 shadow-sm">
+                                            <div class="card-body text-center">
+                                                <h3 class="text-primary mb-0">{{ total_students|default:"150" }}</h3>
+                                                <small class="text-muted">Total Students</small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <div class="card border-0 shadow-sm">
+                                            <div class="card-body text-center">
+                                                <h3 class="text-success mb-0">{{ active_courses|default:"25" }}</h3>
+                                                <small class="text-muted">Active Courses</small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <div class="card border-0 shadow-sm">
+                                            <div class="card-body text-center">
+                                                <h3 class="text-warning mb-0">{{ pending_enrollments|default:"15" }}</h3>
+                                                <small class="text-muted">Pending Enrollments</small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <div class="card border-0 shadow-sm">
+                                            <div class="card-body text-center">
+                                                <h3 class="text-danger mb-0">{{ unread_messages|default:"5" }}</h3>
+                                                <small class="text-muted">Unread Messages</small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Admin Tools -->
+                            <div>
+                                <h6 class="mb-3">Admin Tools</h6>
+                                <div class="list-group list-group-flush">
+                                    <a href="{% url 'core:contact' %}" class="list-group-item list-group-item-action border-0">
+                                        <i class="fas fa-inbox text-primary me-2"></i>
+                                        Contact Messages Management
+                                        {% if unread_messages > 0 %}
+                                        <span class="badge bg-danger float-end">{{ unread_messages }}</span>
+                                        {% endif %}
+                                    </a>
+                                    <a href="#" class="list-group-item list-group-item-action border-0">
+                                        <i class="fas fa-file-export text-success me-2"></i>
+                                        Export Student Data
+                                    </a>
+                                    <a href="#" class="list-group-item list-group-item-action border-0">
+                                        <i class="fas fa-bell text-warning me-2"></i>
+                                        System Announcements
+                                    </a>
+                                    <a href="{% url 'admin:index' %}" class="list-group-item list-group-item-action border-0">
+                                        <i class="fas fa-cogs text-danger me-2"></i>
+                                        Django Admin Panel
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.profile-picture-wrapper input[type="file"] {
+    display: none;
+}
+
+.profile-picture-wrapper label {
+    cursor: pointer;
+    transition: transform 0.3s;
+}
+
+.profile-picture-wrapper label:hover {
+    transform: scale(1.1);
+}
+
+.list-group-item.active {
+    background-color: var(--bs-primary);
+    border-color: var(--bs-primary);
+    color: white;
+}
+
+.form-check-input:checked {
+    background-color: var(--bs-primary);
+    border-color: var(--bs-primary);
+}
+
+.tab-pane {
+    animation: fadeIn 0.3s ease-in-out;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+/* Form styling */
+.form-control, .form-select, textarea {
+    padding: 0.75rem 1rem;
+    border: 1px solid #dee2e6;
+    border-radius: 0.5rem;
+    transition: all 0.3s;
+}
+
+.form-control:focus, .form-select:focus, textarea:focus {
+    border-color: var(--bs-primary);
+    box-shadow: 0 0 0 0.25rem rgba(var(--bs-primary-rgb), 0.25);
+}
+
+textarea {
+    min-height: 100px;
+    resize: vertical;
+}
+
+.is-invalid {
+    border-color: #dc3545 !important;
+}
+
+.invalid-feedback {
+    display: block;
+    width: 100%;
+    margin-top: 0.25rem;
+    font-size: 0.875rem;
+    color: #dc3545;
+}
+
+/* Badge styling */
+.badge {
+    font-size: 0.75rem;
+    padding: 0.35em 0.65em;
+    font-weight: 500;
+}
+
+/* Card hover effects */
+.card {
+    transition: transform 0.3s, box-shadow 0.3s;
+}
+
+.card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(0,0,0,0.1) !important;
+}
+
+/* Required field indicator */
+.form-label .required {
+    color: #dc3545;
+}
+
+/* Form group spacing */
+.form-group {
+    margin-bottom: 1rem;
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Tab switching
+    const tabLinks = document.querySelectorAll('[data-bs-toggle="tab"]');
+    tabLinks.forEach(link => {
+        link.addEventListener('click', function(e) {
+            e.preventDefault();
+            tabLinks.forEach(l => l.classList.remove('active'));
+            this.classList.add('active');
+        });
+    });
+
+    // Profile picture preview
+    const profilePictureInput = document.getElementById('id_profile_picture');
+    const profileImage = document.getElementById('profileImage');
+    const profilePlaceholder = document.getElementById('profilePlaceholder');
+    
+    if (profilePictureInput) {
+        profilePictureInput.addEventListener('change', function(e) {
+            if (this.files && this.files[0]) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    if (profileImage) {
+                        profileImage.src = e.target.result;
+                    } else if (profilePlaceholder) {
+                        const parent = profilePlaceholder.parentElement;
+                        parent.innerHTML = `<img src="${e.target.result}" 
+                                               class="rounded-circle border"
+                                               style="width: 150px; height: 150px; object-fit: cover;"
+                                               id="profileImage">`;
+                    }
+                }
+                reader.readAsDataURL(this.files[0]);
+            }
+        });
+    }
+
+    // Form validation
+    function setupFormValidation(formId) {
+        const form = document.getElementById(formId);
+        if (!form) return;
+        
+        const inputs = form.querySelectorAll('input, select, textarea');
+        inputs.forEach(input => {
+            // Add Bootstrap classes
+            if (input.type !== 'checkbox' && input.type !== 'radio') {
+                input.classList.add('form-control');
+            }
+            
+            // Real-time validation
+            input.addEventListener('blur', function() {
+                validateField(this);
+            });
+            
+            input.addEventListener('input', function() {
+                if (this.value.trim()) {
+                    this.classList.remove('is-invalid');
+                    const errorDiv = this.parentElement.querySelector('.invalid-feedback');
+                    if (errorDiv && errorDiv.textContent.includes('This field is required')) {
+                        errorDiv.remove();
+                    }
+                }
+            });
+        });
+        
+        // Validate select elements
+        const selects = form.querySelectorAll('select');
+        selects.forEach(select => {
+            select.classList.add('form-select');
+        });
+    }
+    
+    function validateField(field) {
+        if (field.hasAttribute('required') && !field.value.trim()) {
+            field.classList.add('is-invalid');
+            if (!field.parentElement.querySelector('.invalid-feedback')) {
+                const errorDiv = document.createElement('div');
+                errorDiv.className = 'invalid-feedback d-block';
+                errorDiv.textContent = 'This field is required.';
+                field.parentElement.appendChild(errorDiv);
+            }
+            return false;
+        }
+        
+        // Email validation
+        if (field.type === 'email' && field.value.trim()) {
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (!emailRegex.test(field.value)) {
+                field.classList.add('is-invalid');
+                if (!field.parentElement.querySelector('.invalid-feedback')) {
+                    const errorDiv = document.createElement('div');
+                    errorDiv.className = 'invalid-feedback d-block';
+                    errorDiv.textContent = 'Please enter a valid email address.';
+                    field.parentElement.appendChild(errorDiv);
+                }
+                return false;
+            }
+        }
+        
+        // Phone validation (Bangladesh format)
+        if (field.id.includes('phone') && field.value.trim()) {
+            const phoneRegex = /^(\+8801[3-9]\d{8}|01[3-9]\d{8})$/;
+            if (!phoneRegex.test(field.value)) {
+                field.classList.add('is-invalid');
+                if (!field.parentElement.querySelector('.invalid-feedback')) {
+                    const errorDiv = document.createElement('div');
+                    errorDiv.className = 'invalid-feedback d-block';
+                    errorDiv.textContent = 'Please enter a valid Bangladeshi phone number (e.g., +8801XXXXXXXXX)';
+                    field.parentElement.appendChild(errorDiv);
+                }
+                return false;
+            }
+        }
+        
+        field.classList.remove('is-invalid');
+        const errorDiv = field.parentElement.querySelector('.invalid-feedback');
+        if (errorDiv && errorDiv.textContent.includes('This field is required')) {
+            errorDiv.remove();
+        }
+        return true;
+    }
+    
+    // Setup form validations
+    setupFormValidation('profileForm');
+    setupFormValidation('passwordForm');
+    
+    // Password confirmation validation
+    const newPassword1 = document.getElementById('id_new_password1');
+    const newPassword2 = document.getElementById('id_new_password2');
+    
+    if (newPassword1 && newPassword2) {
+        function validatePasswordMatch() {
+            if (newPassword1.value && newPassword2.value && newPassword1.value !== newPassword2.value) {
+                newPassword2.classList.add('is-invalid');
+                if (!newPassword2.parentElement.querySelector('.invalid-feedback')) {
+                    const errorDiv = document.createElement('div');
+                    errorDiv.className = 'invalid-feedback d-block';
+                    errorDiv.textContent = 'Passwords do not match.';
+                    newPassword2.parentElement.appendChild(errorDiv);
+                }
+                return false;
+            } else {
+                newPassword2.classList.remove('is-invalid');
+                const errorDiv = newPassword2.parentElement.querySelector('.invalid-feedback');
+                if (errorDiv && errorDiv.textContent.includes('Passwords do not match')) {
+                    errorDiv.remove();
+                }
+                return true;
+            }
+        }
+        
+        newPassword1.addEventListener('input', validatePasswordMatch);
+        newPassword2.addEventListener('input', validatePasswordMatch);
+    }
+    
+    // Two-factor authentication toggle
+    const twoFactorSwitch = document.getElementById('twoFactorSwitch');
+    if (twoFactorSwitch) {
+        twoFactorSwitch.addEventListener('change', function() {
+            if (this.checked) {
+                alert('Two-factor authentication will be enabled. You will be redirected to setup.');
+            } else {
+                if (!confirm('Are you sure you want to disable two-factor authentication?')) {
+                    this.checked = true;
+                }
+            }
+        });
+    }
+    
+    // Auto-hide alerts after 5 seconds
+    const alerts = document.querySelectorAll('.alert');
+    alerts.forEach(alert => {
+        setTimeout(() => {
+            const bsAlert = new bootstrap.Alert(alert);
+            bsAlert.close();
+        }, 5000);
+    });
+});
+</script>
+{% endblock %}

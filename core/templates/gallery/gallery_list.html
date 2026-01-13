@@ -1,0 +1,290 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <!-- Hero Section -->
+    <div class="row mb-5">
+        <div class="col-lg-8">
+            <h1 class="display-5 fw-bold mb-3">Madrasa Gallery</h1>
+            <p class="lead text-muted">
+                Visual journey through our classrooms, events, student activities, and campus life.
+            </p>
+        </div>
+        <div class="col-lg-4 text-lg-end">
+            <a href="{% url 'core:contact' %}" class="btn btn-primary">
+                <i class="fas fa-camera me-2"></i>Submit Photos
+            </a>
+        </div>
+    </div>
+
+    <!-- Category Filter -->
+    <div class="row mb-5">
+        <div class="col-12">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body p-4">
+                    <div class="d-flex flex-wrap gap-2 justify-content-center">
+                        <a href="{% url 'core:gallery' %}" 
+                           class="btn btn-{% if not selected_category %}primary{% else %}outline-primary{% endif %}">
+                            All Photos
+                        </a>
+                        {% for value, label in categories %}
+                        <a href="{% url 'core:gallery' %}?category={{ value }}" 
+                           class="btn btn-{% if selected_category == value %}primary{% else %}outline-primary{% endif %}">
+                            {{ label }}
+                        </a>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Gallery Grid -->
+    {% if gallery_items %}
+    <div class="row g-4" id="galleryGrid">
+        {% for item in gallery_items %}
+        <div class="col-md-6 col-lg-4">
+            <div class="gallery-item card border-0 shadow-sm">
+                <div class="position-relative">
+                    <img src="{{ item.image.url }}" 
+                         class="card-img-top" 
+                         alt="{{ item.title }}"
+                         style="height: 250px; object-fit: cover;"
+                         data-bs-toggle="modal" 
+                         data-bs-target="#imageModal{{ item.id }}">
+                    
+                    <!-- Category Badge -->
+                    <div class="position-absolute top-0 end-0 m-3">
+                        <span class="badge bg-dark bg-opacity-75 py-2 px-3">
+                            {{ item.get_category_display }}
+                        </span>
+                    </div>
+                </div>
+                
+                <div class="card-body">
+                    <h5 class="card-title fw-bold mb-2">{{ item.title }}</h5>
+                    
+                    {% if item.description %}
+                    <p class="card-text text-muted small mb-3">
+                        {{ item.description|truncatewords:15 }}
+                    </p>
+                    {% endif %}
+                    
+                    <div class="d-flex justify-content-between align-items-center">
+                        <small class="text-muted">
+                            <i class="far fa-calendar me-1"></i>
+                            {{ item.uploaded_at|date:"d M, Y" }}
+                        </small>
+                        <button class="btn btn-sm btn-outline-primary" 
+                                data-bs-toggle="modal" 
+                                data-bs-target="#imageModal{{ item.id }}">
+                            View Details
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modal for Image -->
+        <div class="modal fade" id="imageModal{{ item.id }}" tabindex="-1">
+            <div class="modal-dialog modal-lg">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">{{ item.title }}</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <img src="{{ item.image.url }}" 
+                             class="img-fluid rounded mb-3" 
+                             alt="{{ item.title }}">
+                        
+                        {% if item.description %}
+                        <p class="mb-3">{{ item.description }}</p>
+                        {% endif %}
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <ul class="list-unstyled">
+                                    <li class="mb-2">
+                                        <i class="fas fa-folder text-primary me-2"></i>
+                                        <strong>Category:</strong> {{ item.get_category_display }}
+                                    </li>
+                                    <li class="mb-2">
+                                        <i class="far fa-calendar text-success me-2"></i>
+                                        <strong>Uploaded:</strong> {{ item.uploaded_at|date:"F d, Y" }}
+                                    </li>
+                                </ul>
+                            </div>
+                            {% if item.student or item.course or item.event_date %}
+                            <div class="col-md-6">
+                                <ul class="list-unstyled">
+                                    {% if item.student %}
+                                    <li class="mb-2">
+                                        <i class="fas fa-user text-warning me-2"></i>
+                                        <strong>Student:</strong> {{ item.student.full_name }}
+                                    </li>
+                                    {% endif %}
+                                    {% if item.course %}
+                                    <li class="mb-2">
+                                        <i class="fas fa-book text-info me-2"></i>
+                                        <strong>Course:</strong> {{ item.course.name }}
+                                    </li>
+                                    {% endif %}
+                                    {% if item.event_date %}
+                                    <li class="mb-2">
+                                        <i class="fas fa-calendar-day text-danger me-2"></i>
+                                        <strong>Event Date:</strong> {{ item.event_date|date:"F d, Y" }}
+                                    </li>
+                                    {% endif %}
+                                </ul>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                        <a href="{{ item.image.url }}" 
+                           class="btn btn-primary" 
+                           download="{{ item.title|slugify }}">
+                            <i class="fas fa-download me-2"></i>Download
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    {% else %}
+    <div class="text-center py-5">
+        <i class="fas fa-images fa-4x text-muted mb-4"></i>
+        <h3 class="fw-bold mb-3">No Photos Available</h3>
+        <p class="text-muted">
+            {% if selected_category %}
+            No photos in the {{ selected_category }} category yet.
+            {% else %}
+            Gallery is empty. Photos will be added soon.
+            {% endif %}
+        </p>
+        <a href="{% url 'core:gallery' %}" class="btn btn-primary">
+            View All Photos
+        </a>
+    </div>
+    {% endif %}
+
+    <!-- Gallery Statistics -->
+    <div class="row mt-5 pt-5">
+        <div class="col-lg-8 mx-auto">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body p-5">
+                    <h3 class="fw-bold text-center mb-4">Gallery Highlights</h3>
+                    <div class="row text-center">
+                        <div class="col-md-3 mb-3">
+                            <div class="p-3">
+                                <h2 class="display-6 fw-bold text-primary mb-0">{{ gallery_items|length }}</h2>
+                                <p class="text-muted mb-0">Total Photos</p>
+                            </div>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <div class="p-3">
+                                <h2 class="display-6 fw-bold text-success mb-0">{{ categories|length }}</h2>
+                                <p class="text-muted mb-0">Categories</p>
+                            </div>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <div class="p-3">
+                                <h2 class="display-6 fw-bold text-warning mb-0">100+</h2>
+                                <p class="text-muted mb-0">Students Featured</p>
+                            </div>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <div class="p-3">
+                                <h2 class="display-6 fw-bold text-info mb-0">50+</h2>
+                                <p class="text-muted mb-0">Events Captured</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .gallery-item {
+        transition: transform 0.3s ease;
+        cursor: pointer;
+    }
+    
+    .gallery-item:hover {
+        transform: translateY(-5px);
+    }
+    
+    .gallery-item .card-img-top {
+        transition: transform 0.3s ease;
+    }
+    
+    .gallery-item:hover .card-img-top {
+        transform: scale(1.05);
+    }
+    
+    .modal-img {
+        max-height: 70vh;
+        object-fit: contain;
+    }
+    
+    @media (max-width: 768px) {
+        .modal-dialog {
+            margin: 10px;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    $(document).ready(function() {
+        // Initialize image modal
+        $('#imageModal').on('shown.bs.modal', function (event) {
+            var button = $(event.relatedTarget);
+            var imageUrl = button.data('image');
+            var title = button.data('title');
+            var description = button.data('description');
+            
+            var modal = $(this);
+            modal.find('.modal-title').text(title);
+            modal.find('.modal-body img').attr('src', imageUrl);
+            modal.find('.modal-body p').text(description);
+        });
+
+        // Lightbox functionality
+        $('.gallery-item img').click(function() {
+            var src = $(this).attr('src');
+            var alt = $(this).attr('alt');
+            
+            $('#lightboxImage').attr('src', src);
+            $('#lightboxImage').attr('alt', alt);
+            $('#lightboxModal').modal('show');
+        });
+
+        // Filter animation
+        $('.gallery-item').addClass('animate__animated');
+        
+        function animateGalleryItems() {
+            $('.gallery-item').each(function(index) {
+                var $this = $(this);
+                setTimeout(function() {
+                    $this.addClass('animate__fadeInUp');
+                }, index * 100);
+            });
+        }
+        
+        setTimeout(animateGalleryItems, 500);
+    });
+</script>
+{% endblock %}

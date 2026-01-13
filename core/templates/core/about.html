@@ -1,0 +1,152 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <!-- Hero Section -->
+    <div class="row align-items-center mb-5">
+        <div class="col-lg-6">
+            <h1 class="display-4 fw-bold text-primary mb-3">About Us</h1>
+            <h2 class="fs-3 text-dark mb-4">{{ mission }}</h2>
+            <p class="lead text-muted">
+                Taw Haa Zin Nurain Online Madarasa is dedicated to providing authentic Islamic education 
+                through a modern, accessible online platform. We bridge traditional Islamic knowledge 
+                with contemporary learning methodologies.
+            </p>
+        </div>
+        <div class="col-lg-6">
+            <img src="{% static 'img/about-hero.jpg' %}" alt="About Taw Haa Zin Nurain" class="img-fluid rounded shadow">
+        </div>
+    </div>
+
+    <!-- Mission & Vision -->
+    <div class="row g-4 mb-5">
+        <div class="col-md-6">
+            <div class="card h-100 border-0 shadow-sm">
+                <div class="card-body p-4">
+                    <div class="icon-wrapper mb-3">
+                        <i class="fas fa-bullseye fa-2x text-primary"></i>
+                    </div>
+                    <h3 class="h4 card-title mb-3">Our Mission</h3>
+                    <p class="card-text">{{ mission }}</p>
+                    <ul class="list-unstyled mt-3">
+                        <li class="mb-2"><i class="fas fa-check-circle text-success me-2"></i>Authentic Islamic Education</li>
+                        <li class="mb-2"><i class="fas fa-check-circle text-success me-2"></i>Qualified Scholars</li>
+                        <li class="mb-2"><i class="fas fa-check-circle text-success me-2"></i>Modern Teaching Methods</li>
+                        <li class="mb-2"><i class="fas fa-check-circle text-success me-2"></i>Global Accessibility</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-6">
+            <div class="card h-100 border-0 shadow-sm">
+                <div class="card-body p-4">
+                    <div class="icon-wrapper mb-3">
+                        <i class="fas fa-eye fa-2x text-primary"></i>
+                    </div>
+                    <h3 class="h4 card-title mb-3">Our Vision</h3>
+                    <p class="card-text">{{ vision }}</p>
+                    <ul class="list-unstyled mt-3">
+                        <li class="mb-2"><i class="fas fa-globe text-info me-2"></i>Worldwide Reach</li>
+                        <li class="mb-2"><i class="fas fa-graduation-cap text-info me-2"></i>Quality Education</li>
+                        <li class="mb-2"><i class="fas fa-laptop text-info me-2"></i>Technology Integration</li>
+                        <li class="mb-2"><i class="fas fa-users text-info me-2"></i>Community Building</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Our Story -->
+    <div class="row mb-5">
+        <div class="col-12">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body p-4">
+                    <h3 class="h2 text-center mb-4">Our Story</h3>
+                    <div class="row">
+                        <div class="col-lg-8 mx-auto">
+                            <p class="fs-5 text-center">
+                                Founded with a vision to make authentic Islamic education accessible to everyone, 
+                                Taw Haa Zin Nurain Online Madarasa has grown from a small initiative to a global 
+                                platform serving thousands of students worldwide.
+                            </p>
+                            <div class="text-center mt-4">
+                                <a href="{% url 'courses' %}" class="btn btn-primary btn-lg px-4">
+                                    <i class="fas fa-book-open me-2"></i>Explore Our Courses
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Statistics -->
+    <div class="row g-4 mb-5">
+        <div class="col-md-3 col-6">
+            <div class="text-center">
+                <h3 class="display-6 fw-bold text-primary">500+</h3>
+                <p class="text-muted">Students Enrolled</p>
+            </div>
+        </div>
+        <div class="col-md-3 col-6">
+            <div class="text-center">
+                <h3 class="display-6 fw-bold text-primary">50+</h3>
+                <p class="text-muted">Courses Available</p>
+            </div>
+        </div>
+        <div class="col-md-3 col-6">
+            <div class="text-center">
+                <h3 class="display-6 fw-bold text-primary">25+</h3>
+                <p class="text-muted">Qualified Instructors</p>
+            </div>
+        </div>
+        <div class="col-md-3 col-6">
+            <div class="text-center">
+                <h3 class="display-6 fw-bold text-primary">15+</h3>
+                <p class="text-muted">Countries Reached</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Values -->
+    <div class="row">
+        <div class="col-12">
+            <h3 class="h2 text-center mb-5">Our Core Values</h3>
+            <div class="row g-4">
+                <div class="col-md-4">
+                    <div class="text-center p-4">
+                        <div class="icon-lg mb-3">
+                            <i class="fas fa-scale-balanced fa-3x text-primary"></i>
+                        </div>
+                        <h4 class="h5 mb-3">Authenticity</h4>
+                        <p>Teaching pure Islamic knowledge based on Quran and authentic Sunnah</p>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="text-center p-4">
+                        <div class="icon-lg mb-3">
+                            <i class="fas fa-heart fa-3x text-danger"></i>
+                        </div>
+                        <h4 class="h5 mb-3">Excellence</h4>
+                        <p>Striving for highest standards in Islamic education and character development</p>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="text-center p-4">
+                        <div class="icon-lg mb-3">
+                            <i class="fas fa-hands-helping fa-3x text-success"></i>
+                        </div>
+                        <h4 class="h5 mb-3">Community</h4>
+                        <p>Building a supportive global Muslim community through knowledge</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

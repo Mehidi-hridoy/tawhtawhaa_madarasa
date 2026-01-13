@@ -1,0 +1,317 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <!-- Sidebar (same as overview.html) -->
+        <nav id="sidebar" class="col-md-3 col-lg-2 d-md-block bg-light sidebar collapse">
+            <!-- ... same sidebar as overview.html ... -->
+        </nav>
+        
+        <!-- Main Content -->
+        <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4">
+            <!-- Header -->
+            <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+                <h1 class="h2 fw-bold">My Progress</h1>
+                <div class="btn-toolbar mb-2 mb-md-0">
+                    <button class="btn btn-sm btn-outline-primary" onclick="window.print()">
+                        <i class="fas fa-print me-2"></i>Print Report
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Overall Progress -->
+            <div class="row mb-4">
+                <div class="col-lg-8">
+                    <div class="card shadow-sm">
+                        <div class="card-body">
+                            <h5 class="fw-bold mb-4">Overall Learning Progress</h5>
+                            <div class="text-center mb-4">
+                                <div class="progress-circle mx-auto mb-3" 
+                                     data-progress="{{ overall_progress|floatformat:0 }}">
+                                    <span class="progress-value">{{ overall_progress|floatformat:0 }}%</span>
+                                </div>
+                                <h4 class="fw-bold">{{ overall_progress|floatformat:0 }}% Overall Progress</h4>
+                                <p class="text-muted">Based on all your active courses</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-4">
+                    <div class="card shadow-sm h-100">
+                        <div class="card-body">
+                            <h5 class="fw-bold mb-4">Quick Stats</h5>
+                            <div class="mb-4">
+                                <h6 class="text-muted mb-2">Active Courses</h6>
+                                <h3 class="fw-bold text-primary">{{ enrollments.count }}</h3>
+                            </div>
+                            <div class="mb-4">
+                                <h6 class="text-muted mb-2">Average Attendance</h6>
+                                <h3 class="fw-bold text-success">{{ attendance_rate|floatformat:0 }}%</h3>
+                            </div>
+                            <div>
+                                <h6 class="text-muted mb-2">Assignment Completion</h6>
+                                <h3 class="fw-bold text-warning">
+                                    {% with total=0 %}
+                                    {% for enrollment in enrollments %}
+                                    {% with total=total|add:enrollment.assignment_completion %}
+                                    {% endwith %}
+                                    {% endfor %}
+                                    {{ total|div:enrollments.count|floatformat:0 }}%
+                                    {% endwith %}
+                                </h3>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Course Progress Details -->
+            <div class="row mb-4">
+                <div class="col-12">
+                    <div class="card shadow-sm">
+                        <div class="card-body">
+                            <h5 class="fw-bold mb-4">Course-wise Progress</h5>
+                            <div class="table-responsive">
+                                <table class="table table-hover">
+                                    <thead>
+                                        <tr>
+                                            <th>Course</th>
+                                            <th>Progress</th>
+                                            <th>Attendance</th>
+                                            <th>Assignments</th>
+                                            <th>Status</th>
+                                            <th>Action</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for enrollment in enrollments %}
+                                        <tr>
+                                            <td>
+                                                <h6 class="fw-bold mb-1">{{ enrollment.course.name }}</h6>
+                                                <small class="text-muted">{{ enrollment.course.get_category_display }}</small>
+                                            </td>
+                                            <td>
+                                                <div class="d-flex align-items-center">
+                                                    <div class="progress flex-grow-1 me-2" style="height: 8px;">
+                                                        <div class="progress-bar bg-primary" 
+                                                             style="width: {{ enrollment.overall_progress }}%"></div>
+                                                    </div>
+                                                    <small class="fw-bold">{{ enrollment.overall_progress|floatformat:0 }}%</small>
+                                                </div>
+                                            </td>
+                                            <td>
+                                                <div class="d-flex align-items-center">
+                                                    <div class="progress flex-grow-1 me-2" style="height: 8px;">
+                                                        <div class="progress-bar bg-success" 
+                                                             style="width: {{ enrollment.attendance_percentage }}%"></div>
+                                                    </div>
+                                                    <small class="fw-bold">{{ enrollment.attendance_percentage|floatformat:0 }}%</small>
+                                                </div>
+                                            </td>
+                                            <td>
+                                                <div class="d-flex align-items-center">
+                                                    <div class="progress flex-grow-1 me-2" style="height: 8px;">
+                                                        <div class="progress-bar bg-warning" 
+                                                             style="width: {{ enrollment.assignment_completion }}%"></div>
+                                                    </div>
+                                                    <small class="fw-bold">{{ enrollment.assignment_completion|floatformat:0 }}%</small>
+                                                </div>
+                                            </td>
+                                            <td>
+                                                <span class="badge bg-{{ enrollment.enrollment_status }}">
+                                                    {{ enrollment.get_enrollment_status_display }}
+                                                </span>
+                                            </td>
+                                            <td>
+                                                <a href="{% url 'core:course_detail' enrollment.course.id %}" 
+                                                   class="btn btn-sm btn-outline-primary">
+                                                    Details
+                                                </a>
+                                            </td>
+                                        </tr>
+                                        {% empty %}
+                                        <tr>
+                                            <td colspan="6" class="text-center py-4">
+                                                <i class="fas fa-chart-line fa-3x text-muted mb-3"></i>
+                                                <p class="text-muted">No progress data available</p>
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Charts (Placeholder for Chart.js) -->
+            <div class="row">
+                <div class="col-lg-6 mb-4">
+                    <div class="card shadow-sm">
+                        <div class="card-body">
+                            <h5 class="fw-bold mb-4">Progress Over Time</h5>
+                            <canvas id="progressChart" height="250"></canvas>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-6 mb-4">
+                    <div class="card shadow-sm">
+                        <div class="card-body">
+                            <h5 class="fw-bold mb-4">Course Comparison</h5>
+                            <canvas id="comparisonChart" height="250"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .progress-circle {
+        width: 150px;
+        height: 150px;
+        border-radius: 50%;
+        background: conic-gradient(#1a5fb4 0% var(--progress), #e9ecef var(--progress) 100%);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        position: relative;
+    }
+    
+    .progress-circle::before {
+        content: '';
+        position: absolute;
+        width: 130px;
+        height: 130px;
+        background: white;
+        border-radius: 50%;
+    }
+    
+    .progress-value {
+        position: relative;
+        z-index: 1;
+        font-size: 2rem;
+        font-weight: bold;
+        color: #1a5fb4;
+    }
+    
+    @media print {
+        #sidebar, .btn-toolbar, .btn {
+            display: none !important;
+        }
+        
+        main {
+            margin-left: 0 !important;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    $(document).ready(function() {
+        // Set progress circle
+        $('.progress-circle').each(function() {
+            var progress = $(this).data('progress');
+            $(this).css('--progress', progress + '%');
+        });
+        
+        // Initialize progress chart
+        var progressCtx = document.getElementById('progressChart').getContext('2d');
+        var progressChart = new Chart(progressCtx, {
+            type: 'line',
+            data: {
+                labels: ['Week 1', 'Week 2', 'Week 3', 'Week 4', 'Week 5', 'Week 6', 'Week 7'],
+                datasets: [{
+                    label: 'Your Progress',
+                    data: [10, 25, 40, 55, 65, 75, 85],
+                    borderColor: '#1a5fb4',
+                    backgroundColor: 'rgba(26, 95, 180, 0.1)',
+                    fill: true,
+                    tension: 0.4
+                }]
+            },
+            options: {
+                responsive: true,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        max: 100,
+                        ticks: {
+                            callback: function(value) {
+                                return value + '%';
+                            }
+                        }
+                    }
+                }
+            }
+        });
+        
+        // Initialize comparison chart
+        var comparisonCtx = document.getElementById('comparisonChart').getContext('2d');
+        var comparisonChart = new Chart(comparisonCtx, {
+            type: 'bar',
+            data: {
+                labels: [
+                    {% for enrollment in enrollments %}
+                    '{{ enrollment.course.name|truncatechars:15 }}',
+                    {% endfor %}
+                ],
+                datasets: [{
+                    label: 'Progress',
+                    data: [
+                        {% for enrollment in enrollments %}
+                        {{ enrollment.overall_progress }},
+                        {% endfor %}
+                    ],
+                    backgroundColor: '#1a5fb4'
+                }, {
+                    label: 'Attendance',
+                    data: [
+                        {% for enrollment in enrollments %}
+                        {{ enrollment.attendance_percentage }},
+                        {% endfor %}
+                    ],
+                    backgroundColor: '#26a269'
+                }]
+            },
+            options: {
+                responsive: true,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        max: 100,
+                        ticks: {
+                            callback: function(value) {
+                                return value + '%';
+                            }
+                        }
+                    }
+                }
+            }
+        });
+        
+        // Auto-refresh progress data
+        function refreshProgress() {
+            $.ajax({
+                url: '/api/update-progress/',
+                method: 'GET',
+                success: function(data) {
+                    // Update charts if needed
+                }
+            });
+        }
+        
+        setInterval(refreshProgress, 60000); // Every minute
+    });
+</script>
+{% endblock %}

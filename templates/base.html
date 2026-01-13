@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Taw Haa Zin Nurain Online Madarasa{% endblock %}</title>
+    
+    <!-- Bootstrap 5 -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --primary-color: #1a5fb4;
+            --secondary-color: #26a269;
+            --accent-color: #c64600;
+            --light-bg: #f8f9fa;
+            --dark-text: #2d3748;
+            --light-text: #718096;
+        }
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            color: var(--dark-text);
+            line-height: 1.6;
+        }
+        
+        .arabic-font {
+            font-family: 'Amiri', serif;
+        }
+        
+        .navbar-brand {
+            font-weight: 700;
+            font-size: 1.5rem;
+        }
+        
+        .hero-section {
+            background: linear-gradient(135deg, #1a5fb4 0%, #26a269 100%);
+            color: white;
+            padding: 100px 0;
+        }
+        
+        .course-card {
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            border: none;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        
+        .course-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.15);
+        }
+        
+        .badge-quran {
+            background-color: #1a5fb4 !important;
+        }
+        
+        .badge-tadabbur {
+            background-color: #26a269 !important;
+        }
+        
+        .badge-sirah {
+            background-color: #c64600 !important;
+        }
+        
+        .badge-aqida {
+            background-color: #613583 !important;
+        }
+        
+        .instructor-card {
+            text-align: center;
+            padding: 20px;
+        }
+        
+        .instructor-img {
+            width: 150px;
+            height: 150px;
+            border-radius: 50%;
+            object-fit: cover;
+            margin-bottom: 15px;
+            border: 3px solid var(--primary-color);
+        }
+        
+        .progress-circle {
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            background: conic-gradient(var(--primary-color) 0% var(--progress), #e0e0e0 var(--progress) 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 15px;
+        }
+        
+        .progress-circle::after {
+            content: attr(data-progress) '%';
+            background: white;
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 1.2rem;
+        }
+        
+        .faq-item {
+            margin-bottom: 10px;
+        }
+        
+        .faq-question {
+            background: var(--light-bg);
+            padding: 15px;
+            border-radius: 8px;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .faq-answer {
+            padding: 15px;
+            background: white;
+            border: 1px solid #e0e0e0;
+            border-top: none;
+            border-radius: 0 0 8px 8px;
+            display: none;
+        }
+        
+        .gallery-item {
+            position: relative;
+            overflow: hidden;
+            border-radius: 8px;
+        }
+        
+        .gallery-item img {
+            transition: transform 0.3s ease;
+        }
+        
+        .gallery-item:hover img {
+            transform: scale(1.05);
+        }
+        
+        footer {
+            background: #2d3748;
+            color: white;
+            padding: 50px 0 20px;
+        }
+        
+        .social-icons a {
+            color: white;
+            margin-right: 15px;
+            font-size: 1.2rem;
+        }
+        
+        .donation-btn {
+            background: linear-gradient(135deg, #26a269 0%, #1a5fb4 100%);
+            color: white;
+            border: none;
+            padding: 10px 25px;
+            border-radius: 50px;
+            font-weight: 600;
+            text-decoration: none;
+            display: inline-block;
+        }
+        
+        .dashboard-card {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        
+        .stat-number {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: var(--primary-color);
+        }
+        
+        @media (max-width: 768px) {
+            .hero-section {
+                padding: 60px 0;
+            }
+            
+            .navbar-brand {
+                font-size: 1.2rem;
+            }
+        }
+    </style>
+    
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm">
+        <div class="container">
+            <a class="navbar-brand arabic-font" href="{% url 'core:home' %}">
+                <span style="color: var(--primary-color);">Taw Haa</span>
+                <span style="color: var(--secondary-color);">Zin Nurain</span>
+                <small class="d-block" style="font-size: 0.8rem; color: var(--light-text);">Online Madarasa</small>
+            </a>
+            
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'core:home' %}">Home</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'core:courses' %}">Courses</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'core:team' %}">Our Team</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'core:blog' %}">Blog</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'core:gallery' %}">Gallery</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'core:faq' %}">FAQ</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'core:donate' %}">Donate</a>
+                    </li>
+                    {% if user.is_authenticated %}
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'core:dashboard' %}">Dashboard</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'core:logout' %}">Logout</a>
+                        </li>
+                    {% else %}
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'core:login' %}">Login</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="btn btn-primary ms-2" href="{% url 'core:register' %}">Register</a>
+                        </li>
+                    {% endif %}
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Messages -->
+    {% if messages %}
+    <div class="container mt-3">
+        {% for message in messages %}
+        <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- Main Content -->
+    <main>
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- Footer -->
+    <footer>
+        <div class="container">
+            <div class="row">
+                <div class="col-md-4">
+                    <h5 class="arabic-font mb-4">Taw Haa Zin Nurain Online Madarasa</h5>
+                    <p>An Enlighten Generation, is Our Commitment</p>
+                    <div class="social-icons mt-4">
+                        <a href="#"><i class="fab fa-facebook"></i></a>
+                        <a href="#"><i class="fab fa-youtube"></i></a>
+                        <a href="#"><i class="fab fa-twitter"></i></a>
+                        <a href="#"><i class="fab fa-instagram"></i></a>
+                    </div>
+                </div>
+                
+                <div class="col-md-4">
+                    <h5>Our Offices</h5>
+                    <div class="mb-3">
+                        <h6>Dhaka Office</h6>
+                        <p class="mb-1">Pallabi, Metro Pillar 215</p>
+                        <p>Dhaka, Bangladesh</p>
+                    </div>
+                    <div>
+                        <h6>Rangpur Office</h6>
+                        <p class="mb-1">Jummapara, Rangpur, 5400</p>
+                        <p>Contact: +8801740433580</p>
+                    </div>
+                </div>
+                
+                <div class="col-md-4">
+                    <h5>Quick Links</h5>
+                    <ul class="list-unstyled">
+                        <li><a href="{% url 'core:courses' %}" class="text-light text-decoration-none">Our Courses</a></li>
+                        <li><a href="{% url 'core:team' %}" class="text-light text-decoration-none">Meet Our Teachers</a></li>
+                        <li><a href="{% url 'core:faq' %}" class="text-light text-decoration-none">FAQ</a></li>
+                        <li><a href="{% url 'core:donate' %}" class="text-light text-decoration-none">Support Us</a></li>
+                        <li><a href="#" class="text-light text-decoration-none">Privacy Policy</a></li>
+                        <li><a href="#" class="text-light text-decoration-none">Terms & Conditions</a></li>
+                    </ul>
+                </div>
+            </div>
+            
+            <hr class="mt-4 mb-4" style="border-color: #4a5568;">
+            
+            <div class="text-center">
+                <p class="mb-0">&copy; {% now "Y" %} Taw Haa Zin Nurain Online Madarasa. All rights reserved.</p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- jQuery -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    
+    <script>
+        // FAQ Toggle
+        $(document).ready(function() {
+            $('.faq-question').click(function() {
+                $(this).next('.faq-answer').slideToggle();
+                $(this).find('.fa-chevron-down').toggleClass('fa-rotate-180');
+            });
+            
+            // Enrollment percentage animation
+            $('.progress-circle').each(function() {
+                var progress = $(this).attr('data-progress');
+                $(this).css('--progress', progress + '%');
+            });
+        });
+        
+        // Auto-refresh dashboard stats every 30 seconds
+        {% if request.path == '/dashboard/' %}
+        setInterval(function() {
+            $.ajax({
+                url: '{% url "dashboard_stats" %}',
+                success: function(data) {
+                    // Update stats
+                    $('#total-students').text(data.total_students);
+                    $('#active-courses').text(data.active_courses);
+                    $('#completion-rate').text(data.completion_rate + '%');
+                    $('#total-revenue').text('৳' + data.total_revenue);
+                }
+            });
+        }, 30000);
+        {% endif %}
+        
+        // Payment reminder system
+        {% if user.is_authenticated %}
+        function checkPaymentReminders() {
+            $.ajax({
+                url: '{% url "core:check_payment_reminders" %}',
+                success: function(data) {
+                    if (data.has_reminders) {
+                        // Show notification
+                        showNotification('Payment Reminder', data.message, 'warning');
+                    }
+                }
+            });
+        }
+        
+        // Check every hour
+        setInterval(checkPaymentReminders, 3600000);
+        checkPaymentReminders(); // Initial check
+        {% endif %}
+        
+        function showNotification(title, message, type) {
+            // Implement notification display
+            console.log(title + ': ' + message);
+        }
+    </script>
+    
+    {% block extra_js %}{% endblock %}
+</body>
+</html>
+
