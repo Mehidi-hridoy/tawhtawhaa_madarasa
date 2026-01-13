@@ -12,12 +12,12 @@ python manage.py runserver
 git init
 
 git add .
-git commit -m "Initial Django project setup"
+git commit -m "Fix Procfile and gunicorn"
 git push -u origin main
 
 
 git add .
-git commit -m "Heroku deployment setup"
+git commit -m "Fix Procfile and gunicorn"
 git push heroku main
 python manage.py runserver
 
