@@ -1,3 +1,4 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -5,264 +6,272 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}Taw Haa Zin Nurain Online Madarasa{% endblock %}</title>
     
-    <!-- Bootstrap 5 -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
-    <!-- Font Awesome -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    <!-- Google Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     
-    <style>
-        :root {
-            --primary-color: #1a5fb4;
-            --secondary-color: #26a269;
-            --accent-color: #c64600;
-            --light-bg: #f8f9fa;
-            --dark-text: #2d3748;
-            --light-text: #718096;
-        }
-        
-        body {
-            font-family: 'Inter', sans-serif;
-            color: var(--dark-text);
-            line-height: 1.6;
-        }
-        
-        .arabic-font {
-            font-family: 'Amiri', serif;
-        }
-        
-        .navbar-brand {
-            font-weight: 700;
-            font-size: 1.5rem;
-        }
-        
-        .hero-section {
-            background: linear-gradient(135deg, #1a5fb4 0%, #26a269 100%);
-            color: white;
-            padding: 100px 0;
-        }
-        
-        .course-card {
-            transition: transform 0.3s ease, box-shadow 0.3s ease;
-            border: none;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-        }
-        
-        .course-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 10px 20px rgba(0,0,0,0.15);
-        }
-        
-        .badge-quran {
-            background-color: #1a5fb4 !important;
-        }
-        
-        .badge-tadabbur {
-            background-color: #26a269 !important;
-        }
-        
-        .badge-sirah {
-            background-color: #c64600 !important;
-        }
-        
-        .badge-aqida {
-            background-color: #613583 !important;
-        }
-        
-        .instructor-card {
-            text-align: center;
-            padding: 20px;
-        }
-        
-        .instructor-img {
-            width: 150px;
-            height: 150px;
-            border-radius: 50%;
-            object-fit: cover;
-            margin-bottom: 15px;
-            border: 3px solid var(--primary-color);
-        }
-        
-        .progress-circle {
-            width: 100px;
-            height: 100px;
-            border-radius: 50%;
-            background: conic-gradient(var(--primary-color) 0% var(--progress), #e0e0e0 var(--progress) 100%);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin: 0 auto 15px;
-        }
-        
-        .progress-circle::after {
-            content: attr(data-progress) '%';
-            background: white;
-            width: 80px;
-            height: 80px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: bold;
-            font-size: 1.2rem;
-        }
-        
-        .faq-item {
-            margin-bottom: 10px;
-        }
-        
-        .faq-question {
-            background: var(--light-bg);
-            padding: 15px;
-            border-radius: 8px;
-            cursor: pointer;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        
-        .faq-answer {
-            padding: 15px;
-            background: white;
-            border: 1px solid #e0e0e0;
-            border-top: none;
-            border-radius: 0 0 8px 8px;
-            display: none;
-        }
-        
-        .gallery-item {
-            position: relative;
-            overflow: hidden;
-            border-radius: 8px;
-        }
-        
-        .gallery-item img {
-            transition: transform 0.3s ease;
-        }
-        
-        .gallery-item:hover img {
-            transform: scale(1.05);
-        }
-        
-        footer {
-            background: #2d3748;
-            color: white;
-            padding: 50px 0 20px;
-        }
-        
-        .social-icons a {
-            color: white;
-            margin-right: 15px;
-            font-size: 1.2rem;
-        }
-        
-        .donation-btn {
-            background: linear-gradient(135deg, #26a269 0%, #1a5fb4 100%);
-            color: white;
-            border: none;
-            padding: 10px 25px;
-            border-radius: 50px;
-            font-weight: 600;
-            text-decoration: none;
-            display: inline-block;
-        }
-        
-        .dashboard-card {
-            background: white;
-            border-radius: 10px;
-            padding: 20px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-            margin-bottom: 20px;
-        }
-        
-        .stat-number {
-            font-size: 2.5rem;
-            font-weight: 700;
-            color: var(--primary-color);
-        }
-        
-        @media (max-width: 768px) {
-            .hero-section {
-                padding: 60px 0;
-            }
-            
-            .navbar-brand {
-                font-size: 1.2rem;
-            }
-        }
-    </style>
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&family=Amiri:wght@400;700&display=swap" rel="stylesheet">
+    
+    <!-- Custom CSS -->
+    <link href="{% static 'css/style.css' %}" rel="stylesheet">
     
     {% block extra_css %}{% endblock %}
 </head>
 <body>
-    <!-- Navigation -->
-    <nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm">
+    <!-- Navigation Bar -->
+    <nav class="navbar navbar-expand-lg navbar-transparent fixed-top" id="mainNavbar">
         <div class="container">
-            <a class="navbar-brand arabic-font" href="{% url 'core:home' %}">
-                <span style="color: var(--primary-color);">Taw Haa</span>
-                <span style="color: var(--secondary-color);">Zin Nurain</span>
-                <small class="d-block" style="font-size: 0.8rem; color: var(--light-text);">Online Madarasa</small>
+            <!-- Logo -->
+            <a class="navbar-brand" href="{% url 'core:home' %}">
+                <div class="d-flex align-items-center">
+                    <div class="logo-icon me-2">
+                        <i class="fas fa-graduation-cap"></i>
+                    </div>
+                    <div class="logo-text">
+                        <span class="fw-bold text-white">Taw Haa</span>
+                        <span class="fw-bold text-primary">ZinNurain</span>
+                        <small class="d-block text-muted" style="font-size: 0.75rem;">Online Madarasa</small>
+                    </div>
+                </div>
             </a>
-            
+
+            <!-- Mobile Toggle Button -->
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
                 <span class="navbar-toggler-icon"></span>
             </button>
-            
+
+            <!-- Main Navigation -->
             <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav ms-auto">
+                <ul class="navbar-nav mx-auto">
+                    <!-- Home -->
                     <li class="nav-item">
-                        <a class="nav-link" href="{% url 'core:home' %}">Home</a>
+                        <a class="nav-link" href="{% url 'core:home' %}">
+                            <i class="fas fa-home me-1 d-lg-none"></i> Home
+                        </a>
                     </li>
+
+                    <!-- Courses Dropdown -->
+                    <li class="nav-item dropdown mega-dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" id="coursesDropdown" role="button" 
+                           data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="fas fa-book me-1 d-lg-none"></i> Courses
+                        </a>
+                        <div class="dropdown-menu mega-menu p-4" aria-labelledby="coursesDropdown">
+                            <div class="container">
+                                <div class="row">
+                                    <div class="col-lg-3">
+                                        <div class="category-group">
+                                            <h6 class="text-primary mb-3">
+                                                <i class="fas fa-quran me-2"></i> Quran Studies
+                                            </h6>
+                                            <a href="{% url 'core:courses' %}?category=quran" class="dropdown-item">
+                                                <div class="d-flex align-items-center py-2">
+                                                    <div class="icon-sm bg-primary rounded-circle me-3">
+                                                        <i class="fas fa-microphone text-white"></i>
+                                                    </div>
+                                                    <div>
+                                                        <div class="fw-medium">Quran Recitation</div>
+                                                        <small class="text-muted">With Tajweed rules</small>
+                                                    </div>
+                                                </div>
+                                            </a>
+                                            <a href="{% url 'core:courses' %}?category=memorization" class="dropdown-item">
+                                                <div class="d-flex align-items-center py-2">
+                                                    <div class="icon-sm bg-success rounded-circle me-3">
+                                                        <i class="fas fa-brain text-white"></i>
+                                                    </div>
+                                                    <div>
+                                                        <div class="fw-medium">Hifz Program</div>
+                                                        <small class="text-muted">Quran Memorization</small>
+                                                    </div>
+                                                </div>
+                                            </a>
+                                        </div>
+                                    </div>
+                                    <div class="col-lg-3">
+                                        <div class="category-group">
+                                            <h6 class="text-success mb-3">
+                                                <i class="fas fa-book-open me-2"></i> Tadabbur & Tafsir
+                                            </h6>
+                                            <a href="{% url 'core:courses' %}?category=tadabbur" class="dropdown-item">
+                                                <div class="d-flex align-items-center py-2">
+                                                    <div class="icon-sm bg-success rounded-circle me-3">
+                                                        <i class="fas fa-lightbulb text-white"></i>
+                                                    </div>
+                                                    <div>
+                                                        <div class="fw-medium">Tadabbur Quran</div>
+                                                        <small class="text-muted">Deep reflection</small>
+                                                    </div>
+                                                </div>
+                                            </a>
+                                            <a href="{% url 'core:courses' %}?category=tafsir" class="dropdown-item">
+                                                <div class="d-flex align-items-center py-2">
+                                                    <div class="icon-sm bg-warning rounded-circle me-3">
+                                                        <i class="fas fa-book-reader text-white"></i>
+                                                    </div>
+                                                    <div>
+                                                        <div class="fw-medium">Quran Tafsir</div>
+                                                        <small class="text-muted">Detailed explanation</small>
+                                                    </div>
+                                                </div>
+                                            </a>
+                                        </div>
+                                    </div>
+                                    <div class="col-lg-3">
+                                        <div class="category-group">
+                                            <h6 class="text-warning mb-3">
+                                                <i class="fas fa-mosque me-2"></i> Seerah & Sunnah
+                                            </h6>
+                                            <a href="{% url 'core:courses' %}?category=seerah" class="dropdown-item">
+                                                <div class="d-flex align-items-center py-2">
+                                                    <div class="icon-sm bg-warning rounded-circle me-3">
+                                                        <i class="fas fa-user text-white"></i>
+                                                    </div>
+                                                    <div>
+                                                        <div class="fw-medium">Riratunnabi (SM)</div>
+                                                        <small class="text-muted">Prophet's life</small>
+                                                    </div>
+                                                </div>
+                                            </a>
+                                            <a href="{% url 'core:courses' %}?category=hadith" class="dropdown-item">
+                                                <div class="d-flex align-items-center py-2">
+                                                    <div class="icon-sm bg-info rounded-circle me-3">
+                                                        <i class="fas fa-quote-right text-white"></i>
+                                                    </div>
+                                                    <div>
+                                                        <div class="fw-medium">Hadith Studies</div>
+                                                        <small class="text-muted">Prophet's traditions</small>
+                                                    </div>
+                                                </div>
+                                            </a>
+                                        </div>
+                                    </div>
+                                    <div class="col-lg-3">
+                                        <div class="category-group">
+                                            <h6 class="text-info mb-3">
+                                                <i class="fas fa-graduation-cap me-2"></i> Islamic Sciences
+                                            </h6>
+                                            <a href="{% url 'core:courses' %}?category=aqida" class="dropdown-item">
+                                                <div class="d-flex align-items-center py-2">
+                                                    <div class="icon-sm bg-info rounded-circle me-3">
+                                                        <i class="fas fa-brain text-white"></i>
+                                                    </div>
+                                                    <div>
+                                                        <div class="fw-medium">Aqida Learning</div>
+                                                        <small class="text-muted">Islamic creed</small>
+                                                    </div>
+                                                </div>
+                                            </a>
+                                            <a href="{% url 'core:courses' %}?category=fiqh" class="dropdown-item">
+                                                <div class="d-flex align-items-center py-2">
+                                                    <div class="icon-sm bg-danger rounded-circle me-3">
+                                                        <i class="fas fa-balance-scale text-white"></i>
+                                                    </div>
+                                                    <div>
+                                                        <div class="fw-medium">Fiqh Studies</div>
+                                                        <small class="text-muted">Islamic jurisprudence</small>
+                                                    </div>
+                                                </div>
+                                            </a>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="row mt-4">
+                                    <div class="col-12 text-center">
+                                        <a href="{% url 'core:courses' %}" class="btn btn-outline-primary">
+                                            <i class="fas fa-book me-2"></i>View All Courses
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </li>
+
+                    <!-- About -->
                     <li class="nav-item">
-                        <a class="nav-link" href="{% url 'core:courses' %}">Courses</a>
+                        <a class="nav-link" href="{% url 'core:about' %}">
+                            <i class="fas fa-info-circle me-1 d-lg-none"></i> About
+                        </a>
                     </li>
+
+                    <!-- Instructors -->
                     <li class="nav-item">
-                        <a class="nav-link" href="{% url 'core:team' %}">Our Team</a>
+                        <a class="nav-link" href="{% url 'core:team' %}">
+                            <i class="fas fa-chalkboard-teacher me-1 d-lg-none"></i> Instructors
+                        </a>
                     </li>
+
+                    <!-- Blog -->
                     <li class="nav-item">
-                        <a class="nav-link" href="{% url 'core:blog' %}">Blog</a>
+                        <a class="nav-link" href="{% url 'core:blog' %}">
+                            <i class="fas fa-blog me-1 d-lg-none"></i> Blog
+                        </a>
                     </li>
+
+                    <!-- Contact -->
                     <li class="nav-item">
-                        <a class="nav-link" href="{% url 'core:gallery' %}">Gallery</a>
+                        <a class="nav-link" href="{% url 'core:contact' %}">
+                            <i class="fas fa-phone me-1 d-lg-none"></i> Contact
+                        </a>
                     </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="{% url 'core:faq' %}">FAQ</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="{% url 'core:donate' %}">Donate</a>
-                    </li>
-                    {% if user.is_authenticated %}
-                        <li class="nav-item">
-                            <a class="nav-link" href="{% url 'core:dashboard' %}">Dashboard</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="{% url 'core:logout' %}">Logout</a>
-                        </li>
-                    {% else %}
-                        <li class="nav-item">
-                            <a class="nav-link" href="{% url 'core:login' %}">Login</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="btn btn-primary ms-2" href="{% url 'core:register' %}">Register</a>
-                        </li>
-                    {% endif %}
                 </ul>
+
+                <!-- Auth Buttons / User Dropdown -->
+                <div class="navbar-nav align-items-lg-center">
+                    {% if user.is_authenticated %}
+                        <div class="nav-item dropdown">
+                            <a class="nav-link dropdown-toggle d-flex align-items-center" href="#" 
+                               id="userDropdown" role="button" data-bs-toggle="dropdown">
+                                <div class="user-avatar me-2">
+                                    {% if user.student_profile.profile_picture %}
+                                        <img src="{{ user.student_profile.profile_picture.url }}" 
+                                             alt="{{ user.get_full_name }}" 
+                                             class="rounded-circle">
+                                    {% else %}
+                                        <div class="avatar-placeholder rounded-circle">
+                                            {{ user.first_name|first|upper }}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                                <span class="d-none d-lg-inline">{{ user.first_name }}</span>
+                            </a>
+                            <div class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
+                                <a class="dropdown-item" href="{% url 'core:dashboard' %}">
+                                    <i class="fas fa-tachometer-alt me-2"></i> Dashboard
+                                </a>
+                                <a class="dropdown-item" href="{% url 'core:profile_settings' %}">
+                                    <i class="fas fa-user-cog me-2"></i> Profile Settings
+                                </a>
+                                <a class="dropdown-item" href="{% url 'core:my_courses' %}">
+                                    <i class="fas fa-book me-2"></i> My Courses
+                                </a>
+                                {% if user.is_staff %}
+                                <div class="dropdown-divider"></div>
+                                <a class="dropdown-item text-danger" href="{% url 'admin:index' %}">
+                                    <i class="fas fa-cog me-2"></i> Admin Panel
+                                </a>
+                                {% endif %}
+                                <div class="dropdown-divider"></div>
+                                <a class="dropdown-item" href="{% url 'core:logout' %}">
+                                    <i class="fas fa-sign-out-alt me-2"></i> Logout
+                                </a>
+                            </div>
+                        </div>
+                    {% else %}
+                        <a href="{% url 'core:login' %}" class="btn btn-outline-light btn-sm me-2">
+                            <i class="fas fa-sign-in-alt me-1"></i> Login
+                        </a>
+                        <a href="{% url 'core:register' %}" class="btn btn-primary btn-sm">
+                            <i class="fas fa-user-plus me-1"></i> Register
+                        </a>
+                    {% endif %}
+                </div>
             </div>
         </div>
     </nav>
-
-    <!-- Messages -->
-    {% if messages %}
-    <div class="container mt-3">
-        {% for message in messages %}
-        <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
-            {{ message }}
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-        </div>
-        {% endfor %}
-    </div>
-    {% endif %}
 
     <!-- Main Content -->
     <main>
@@ -270,117 +279,95 @@
     </main>
 
     <!-- Footer -->
-    <footer>
+    <footer class="footer bg-dark text-white pt-5 pb-4">
         <div class="container">
             <div class="row">
-                <div class="col-md-4">
-                    <h5 class="arabic-font mb-4">Taw Haa Zin Nurain Online Madarasa</h5>
-                    <p>An Enlighten Generation, is Our Commitment</p>
-                    <div class="social-icons mt-4">
-                        <a href="#"><i class="fab fa-facebook"></i></a>
-                        <a href="#"><i class="fab fa-youtube"></i></a>
-                        <a href="#"><i class="fab fa-twitter"></i></a>
-                        <a href="#"><i class="fab fa-instagram"></i></a>
+                <div class="col-lg-4 mb-4">
+                    <h5 class="mb-3">
+                        <i class="fas fa-graduation-cap me-2 text-primary"></i>
+                        Taw Haa Zin Nurain
+                    </h5>
+                    <p class="text-muted">
+                        An enlightened generation is our commitment. Providing authentic Islamic education 
+                        through qualified scholars and modern technology.
+                    </p>
+                    <div class="social-links mt-3">
+                        <a href="#" class="text-white me-3"><i class="fab fa-facebook fa-lg"></i></a>
+                        <a href="#" class="text-white me-3"><i class="fab fa-twitter fa-lg"></i></a>
+                        <a href="#" class="text-white me-3"><i class="fab fa-youtube fa-lg"></i></a>
+                        <a href="#" class="text-white"><i class="fab fa-telegram fa-lg"></i></a>
                     </div>
                 </div>
                 
-                <div class="col-md-4">
-                    <h5>Our Offices</h5>
-                    <div class="mb-3">
-                        <h6>Dhaka Office</h6>
-                        <p class="mb-1">Pallabi, Metro Pillar 215</p>
-                        <p>Dhaka, Bangladesh</p>
-                    </div>
-                    <div>
-                        <h6>Rangpur Office</h6>
-                        <p class="mb-1">Jummapara, Rangpur, 5400</p>
-                        <p>Contact: +8801740433580</p>
-                    </div>
-                </div>
-                
-                <div class="col-md-4">
-                    <h5>Quick Links</h5>
+                <div class="col-lg-2 col-md-6 mb-4">
+                    <h6 class="mb-3">Quick Links</h6>
                     <ul class="list-unstyled">
-                        <li><a href="{% url 'core:courses' %}" class="text-light text-decoration-none">Our Courses</a></li>
-                        <li><a href="{% url 'core:team' %}" class="text-light text-decoration-none">Meet Our Teachers</a></li>
-                        <li><a href="{% url 'core:faq' %}" class="text-light text-decoration-none">FAQ</a></li>
-                        <li><a href="{% url 'core:donate' %}" class="text-light text-decoration-none">Support Us</a></li>
-                        <li><a href="#" class="text-light text-decoration-none">Privacy Policy</a></li>
-                        <li><a href="#" class="text-light text-decoration-none">Terms & Conditions</a></li>
+                        <li class="mb-2"><a href="{% url 'core:home' %}" class="text-muted">Home</a></li>
+                        <li class="mb-2"><a href="{% url 'core:courses' %}" class="text-muted">Courses</a></li>
+                        <li class="mb-2"><a href="{% url 'core:about' %}" class="text-muted">About Us</a></li>
+                        <li class="mb-2"><a href="{% url 'core:contact' %}" class="text-muted">Contact</a></li>
                     </ul>
+                </div>
+                
+                <div class="col-lg-3 col-md-6 mb-4">
+                    <h6 class="mb-3">Contact Info</h6>
+                    <ul class="list-unstyled text-muted">
+                        <li class="mb-2">
+                            <i class="fas fa-phone me-2 text-primary"></i>
+                            +8801740433580
+                        </li>
+                        <li class="mb-2">
+                            <i class="fas fa-envelope me-2 text-primary"></i>
+                            info@tawhaa.edu.bd
+                        </li>
+                        <li class="mb-2">
+                            <i class="fas fa-clock me-2 text-primary"></i>
+                            9:00 AM - 10:00 PM (Everyday)
+                        </li>
+                    </ul>
+                </div>
+                
+                <div class="col-lg-3 mb-4">
+                    <h6 class="mb-3">Subscribe</h6>
+                    <p class="text-muted small">Stay updated with our latest courses and announcements.</p>
+                    <form class="subscribe-form">
+                        <div class="input-group">
+                            <input type="email" class="form-control" placeholder="Your email" required>
+                            <button class="btn btn-primary" type="submit">
+                                <i class="fas fa-paper-plane"></i>
+                            </button>
+                        </div>
+                    </form>
                 </div>
             </div>
             
-            <hr class="mt-4 mb-4" style="border-color: #4a5568;">
+            <hr class="border-secondary">
             
-            <div class="text-center">
-                <p class="mb-0">&copy; {% now "Y" %} Taw Haa Zin Nurain Online Madarasa. All rights reserved.</p>
+            <div class="row">
+                <div class="col-md-6">
+                    <p class="text-muted small mb-0">
+                        © 2024 Taw Haa Zin Nurain Online Madarasa. All rights reserved.
+                    </p>
+                </div>
+                <div class="col-md-6 text-md-end">
+                    <a href="#" class="text-muted small me-3">Privacy Policy</a>
+                    <a href="#" class="text-muted small">Terms of Service</a>
+                </div>
             </div>
         </div>
     </footer>
 
-    <!-- Bootstrap JS -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
-    <!-- jQuery -->
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <!-- Back to Top Button -->
+    <a href="#" class="back-to-top" id="backToTop">
+        <i class="fas fa-chevron-up"></i>
+    </a>
+
+    <!-- Bootstrap JS Bundle with Popper -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     
-    <script>
-        // FAQ Toggle
-        $(document).ready(function() {
-            $('.faq-question').click(function() {
-                $(this).next('.faq-answer').slideToggle();
-                $(this).find('.fa-chevron-down').toggleClass('fa-rotate-180');
-            });
-            
-            // Enrollment percentage animation
-            $('.progress-circle').each(function() {
-                var progress = $(this).attr('data-progress');
-                $(this).css('--progress', progress + '%');
-            });
-        });
-        
-        // Auto-refresh dashboard stats every 30 seconds
-        {% if request.path == '/dashboard/' %}
-        setInterval(function() {
-            $.ajax({
-                url: '{% url "dashboard_stats" %}',
-                success: function(data) {
-                    // Update stats
-                    $('#total-students').text(data.total_students);
-                    $('#active-courses').text(data.active_courses);
-                    $('#completion-rate').text(data.completion_rate + '%');
-                    $('#total-revenue').text('৳' + data.total_revenue);
-                }
-            });
-        }, 30000);
-        {% endif %}
-        
-        // Payment reminder system
-        {% if user.is_authenticated %}
-        function checkPaymentReminders() {
-            $.ajax({
-                url: '{% url "core:check_payment_reminders" %}',
-                success: function(data) {
-                    if (data.has_reminders) {
-                        // Show notification
-                        showNotification('Payment Reminder', data.message, 'warning');
-                    }
-                }
-            });
-        }
-        
-        // Check every hour
-        setInterval(checkPaymentReminders, 3600000);
-        checkPaymentReminders(); // Initial check
-        {% endif %}
-        
-        function showNotification(title, message, type) {
-            // Implement notification display
-            console.log(title + ': ' + message);
-        }
-    </script>
+    <!-- Custom JS -->
+    <script src="{% static 'js/main.js' %}"></script>
     
     {% block extra_js %}{% endblock %}
 </body>
 </html>
-

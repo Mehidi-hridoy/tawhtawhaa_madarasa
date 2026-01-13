@@ -1,0 +1,392 @@
+/* Global Styles */
+:root {
+    --primary-color: #1a5fb4;
+    --secondary-color: #26a269;
+    --accent-color: #c64600;
+    --light-bg: #f8f9fa;
+    --dark-bg: #1a1a2e;
+    --transition: all 0.3s ease;
+}
+
+body {
+    font-family: 'Poppins', sans-serif;
+    overflow-x: hidden;
+    padding-top: 76px; /* For fixed navbar */
+}
+
+/* Arabic Font */
+.arabic-font {
+    font-family: 'Amiri', serif;
+}
+
+/* Navigation Bar */
+.navbar-transparent {
+    background: transparent;
+    backdrop-filter: blur(0px);
+    transition: var(--transition);
+    padding: 1rem 0;
+    border-bottom: 1px solid transparent;
+}
+
+.navbar-transparent.scrolled {
+    background: rgba(26, 31, 38, 0.95);
+    backdrop-filter: blur(10px);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    padding: 0.5rem 0;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+}
+
+.navbar-brand .logo-icon {
+    width: 40px;
+    height: 40px;
+    background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.navbar-brand .logo-icon i {
+    color: white;
+    font-size: 1.5rem;
+}
+
+.nav-link {
+    color: rgba(255, 255, 255, 0.9) !important;
+    font-weight: 500;
+    padding: 0.5rem 1rem !important;
+    margin: 0 0.25rem;
+    border-radius: 6px;
+    transition: var(--transition);
+    position: relative;
+}
+
+.nav-link:hover {
+    color: white !important;
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.nav-link::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 0;
+    height: 2px;
+    background: linear-gradient(90deg, var(--primary-color), var(--secondary-color));
+    transition: var(--transition);
+}
+
+.nav-link:hover::after,
+.nav-link.active::after {
+    width: 80%;
+}
+
+/* Mega Dropdown Menu */
+.mega-dropdown .dropdown-menu {
+    width: 100%;
+    max-width: 900px;
+    border: none;
+    border-radius: 15px;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+    transform: translateX(-50%);
+    left: 50%;
+    top: 120%;
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.3s ease;
+    display: block;
+}
+
+.mega-dropdown:hover .dropdown-menu {
+    opacity: 1;
+    visibility: visible;
+    top: 100%;
+}
+
+.mega-menu {
+    animation: slideDown 0.3s ease;
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateX(-50%) translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(-50%) translateY(0);
+    }
+}
+
+.category-group h6 {
+    font-weight: 600;
+    padding-bottom: 0.5rem;
+    border-bottom: 2px solid;
+    display: inline-block;
+}
+
+.icon-sm {
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.dropdown-item {
+    padding: 0 !important;
+    margin-bottom: 0.5rem;
+    border-radius: 8px;
+    transition: var(--transition);
+}
+
+.dropdown-item:hover {
+    background: transparent !important;
+    transform: translateX(5px);
+}
+
+/* User Avatar */
+.user-avatar img {
+    width: 36px;
+    height: 36px;
+    object-fit: cover;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+}
+
+.avatar-placeholder {
+    width: 36px;
+    height: 36px;
+    background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    font-size: 1.1rem;
+}
+
+/* Hero Section Enhancements */
+.hero-section {
+    position: relative;
+    overflow: hidden;
+    margin-top: -76px;
+    padding-top: 76px;
+}
+
+.hero-section .container {
+    position: relative;
+    z-index: 2;
+}
+
+/* Floating Elements Animation */
+.floating-card {
+    animation: float 6s ease-in-out infinite;
+    transition: var(--transition);
+}
+
+.floating-card:hover {
+    transform: translateY(-5px) scale(1.05);
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2) !important;
+    z-index: 10;
+}
+
+@keyframes float {
+    0%, 100% {
+        transform: translateY(0);
+    }
+    50% {
+        transform: translateY(-20px);
+    }
+}
+
+/* Course Cards */
+.course-card {
+    transition: var(--transition);
+    border: none;
+    overflow: hidden;
+}
+
+.course-card:hover {
+    transform: translateY(-10px);
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15) !important;
+}
+
+.course-card .card-img-top {
+    transition: transform 0.5s ease;
+}
+
+.course-card:hover .card-img-top {
+    transform: scale(1.1);
+}
+
+/* Category Cards */
+.category-card {
+    transition: var(--transition);
+    height: 100%;
+}
+
+.category-card:hover {
+    transform: translateY(-10px);
+    box-shadow: 0 15px 30px rgba(0, 0, 0, 0.1) !important;
+}
+
+.category-card .icon-wrapper {
+    transition: var(--transition);
+}
+
+.category-card:hover .icon-wrapper {
+    transform: scale(1.1) rotate(5deg);
+}
+
+/* Instructor Cards */
+.instructor-card {
+    transition: var(--transition);
+}
+
+.instructor-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1) !important;
+}
+
+.instructor-img {
+    transition: var(--transition);
+}
+
+.instructor-card:hover .instructor-img {
+    transform: scale(1.05);
+    border-color: var(--primary-color);
+}
+
+/* Back to Top Button */
+.back-to-top {
+    position: fixed;
+    bottom: 30px;
+    right: 30px;
+    width: 50px;
+    height: 50px;
+    background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+    color: white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-decoration: none;
+    opacity: 0;
+    visibility: hidden;
+    transition: var(--transition);
+    z-index: 1000;
+    box-shadow: 0 4px 15px rgba(26, 95, 180, 0.3);
+}
+
+.back-to-top.show {
+    opacity: 1;
+    visibility: visible;
+}
+
+.back-to-top:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 6px 20px rgba(26, 95, 180, 0.4);
+}
+
+/* Responsive Design */
+@media (max-width: 992px) {
+    .navbar-collapse {
+        background: rgba(26, 31, 38, 0.98);
+        backdrop-filter: blur(10px);
+        padding: 1rem;
+        border-radius: 10px;
+        margin-top: 1rem;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+    }
+    
+    .nav-link {
+        padding: 0.75rem 1rem !important;
+        margin: 0.25rem 0;
+    }
+    
+    .mega-dropdown .dropdown-menu {
+        position: static;
+        transform: none;
+        left: auto;
+        width: 100%;
+        box-shadow: none;
+        background: rgba(255, 255, 255, 0.05);
+    }
+    
+    .mega-menu {
+        padding: 1rem !important;
+    }
+}
+
+@media (max-width: 768px) {
+    .hero-section {
+        padding: 100px 0 50px;
+    }
+    
+    .floating-elements {
+        margin-top: 2rem;
+    }
+    
+    .floating-card {
+        position: relative !important;
+        margin-bottom: 1rem;
+        animation: none;
+    }
+}
+
+/* Loading Animation */
+.loading {
+    display: inline-block;
+    width: 20px;
+    height: 20px;
+    border: 3px solid rgba(255, 255, 255, 0.3);
+    border-radius: 50%;
+    border-top-color: white;
+    animation: spin 1s ease-in-out infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+/* Form Styling */
+.form-control:focus {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 0.25rem rgba(26, 95, 180, 0.25);
+}
+
+/* Button Styling */
+.btn-primary {
+    background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+    border: none;
+    transition: var(--transition);
+}
+
+.btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 20px rgba(26, 95, 180, 0.3);
+}
+
+.btn-outline-primary:hover {
+    background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+    border-color: transparent;
+}
+
+/* Badge Styling */
+.badge {
+    padding: 0.35em 0.65em;
+    font-weight: 500;
+}
+
+/* Progress Bar */
+.progress {
+    height: 8px;
+    border-radius: 4px;
+}
+
+.progress-bar {
+    background: linear-gradient(90deg, var(--primary-color), var(--secondary-color));
+    border-radius: 4px;
+}
