@@ -16,6 +16,14 @@ git commit -m "Initial Django project setup"
 git push -u origin main
 
 
+git add .
+git commit -m "Heroku deployment setup"
+git push heroku main
+python manage.py runserver
+
+
+pip freeze > requirements.txt
+
 git pull origin main
 
 
