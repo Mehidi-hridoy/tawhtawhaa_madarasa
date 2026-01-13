@@ -902,7 +902,7 @@ def about(request):
         'mission': 'An Enlighten Generation, is Our Commitment',
         'vision': 'To provide authentic Islamic education to students worldwide through qualified scholars and modern technology.',
     }
-    return render(request, 'core:about.html', context)
+    return render(request, 'core/about.html', context)
 
 # Search View
 def search(request):
