@@ -1,7 +1,7 @@
 {% extends 'base.html' %}
 {% load static %}
-{% load humanize %}
-
+{% load custom_filters %}
+{{ enrollment.due_amount|intcomma }}
 {% block title %}{{ title }}{% endblock %}
 
 {% block content %}
@@ -125,12 +125,12 @@
                 </li>
                 <li class="nav-item" role="presentation">
                     <button class="nav-link" id="verified-tab" data-bs-toggle="tab" data-bs-target="#verified">
-                        Verified ({{ payments.filter.is_verified=True|length }})
+                        Verified ({{ total_paid }})
                     </button>
                 </li>
                 <li class="nav-item" role="presentation">
                     <button class="nav-link" id="pending-tab" data-bs-toggle="tab" data-bs-target="#pending" id="pendingPayments">
-                        Pending ({{ payments.filter.is_verified=False|length }})
+                        Pending ({{ total_due }})
                     </button>
                 </li>
             </ul>
@@ -326,7 +326,6 @@
             </div>
             
             <!-- Due Payments Section -->
-            {% with due_enrollments=enrollments.filter.payment_status__in='pending,partial' %}
             {% if due_enrollments %}
             <div class="card border-warning shadow-sm mt-4">
                 <div class="card-header bg-warning bg-opacity-10 border-warning">
@@ -396,7 +395,6 @@
                 </div>
             </div>
             {% endif %}
-            {% endwith %}
             
             <!-- Payment Instructions -->
             <div class="card shadow-sm mt-4">

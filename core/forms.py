@@ -2,7 +2,7 @@ from django import forms
 from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth.models import User
 from .models import *
-
+from datetime import date
 
 
 class UserRegistrationForm(UserCreationForm):
@@ -60,23 +60,24 @@ class StudentRegistrationForm(forms.ModelForm):
             'emergency_contact': forms.TextInput(attrs={'class': 'form-control', 'placeholder': '+8801XXXXXXXXX'}),
             'address': forms.Textarea(attrs={'rows': 3, 'class': 'form-control'}),
             'city': forms.TextInput(attrs={'class': 'form-control'}),
-            'country': forms.Select(attrs={'class': 'form-select'}),
+            'country': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'e.g., Bangladesh'}),  # CHANGED TO TextInput
             'occupation': forms.Select(attrs={'class': 'form-select'}),
             'education': forms.Select(attrs={'class': 'form-select'}),
             'previous_islamic_studies': forms.Textarea(attrs={'rows': 3, 'class': 'form-control', 
                                                             'placeholder': 'Briefly describe any previous Islamic studies experience...'}),
-            'preferred_time_slot': forms.Select(attrs={'class': 'form-select'}),
-            'preferred_language': forms.Select(attrs={'class': 'form-select'}),
+            'preferred_language': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'e.g., Bangla, English'}),
+            'profile_picture': forms.FileInput(attrs={'class': 'form-control'}),
         }
     
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        # Add country choices
-        self.fields['country'].initial = 'Bangladesh'
+        # Remove the initial value for country since it's now manual input
+        self.fields['country'].initial = ''  # REMOVE 'Bangladesh' initial value
         # Add required attribute to necessary fields
         self.fields['full_name'].required = True
         self.fields['gender'].required = True
         self.fields['phone'].required = True
+        self.fields['country'].required = True  # ADD THIS LINE
     
     def clean_date_of_birth(self):
         dob = self.cleaned_data.get('date_of_birth')
@@ -86,6 +87,7 @@ class StudentRegistrationForm(forms.ModelForm):
             if age < 10:
                 raise forms.ValidationError("You must be at least 10 years old to register.")
         return dob
+
 
 class UserUpdateForm(forms.ModelForm):
     class Meta:
@@ -114,14 +116,18 @@ class StudentUpdateForm(forms.ModelForm):
             'emergency_contact': forms.TextInput(attrs={'class': 'form-control'}),
             'address': forms.Textarea(attrs={'rows': 3, 'class': 'form-control'}),
             'city': forms.TextInput(attrs={'class': 'form-control'}),
-            'country': forms.Select(attrs={'class': 'form-select'}),
+            'country': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'e.g., Bangladesh'}),  # CHANGED TO TextInput
             'occupation': forms.Select(attrs={'class': 'form-select'}),
             'education': forms.Select(attrs={'class': 'form-select'}),
             'previous_islamic_studies': forms.Textarea(attrs={'rows': 3, 'class': 'form-control'}),
-            'preferred_time_slot': forms.Select(attrs={'class': 'form-select'}),
-            'preferred_language': forms.Select(attrs={'class': 'form-select'}),
+            'preferred_language': forms.TextInput(attrs={'class': 'form-control',}),
             'profile_picture': forms.FileInput(attrs={'class': 'form-control'}),
         }
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Make country required in the form
+        self.fields['country'].required = True
     
     def clean_date_of_birth(self):
         dob = self.cleaned_data.get('date_of_birth')
@@ -131,8 +137,6 @@ class StudentUpdateForm(forms.ModelForm):
             if age < 10:
                 raise forms.ValidationError("You must be at least 10 years old.")
         return dob
-
-
 
 class EnrollmentForm(forms.ModelForm):
     agree_to_terms = forms.BooleanField(

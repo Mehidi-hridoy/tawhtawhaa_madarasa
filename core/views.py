@@ -14,6 +14,16 @@ from .models import *
 from .forms import *
 from django.contrib.auth.decorators import user_passes_test
 
+
+
+# views.py
+from django.shortcuts import render, redirect, get_object_or_404
+from django.contrib.auth.decorators import login_required
+from django.contrib import messages
+from django.contrib.auth import update_session_auth_hash
+from django.contrib.auth.forms import PasswordChangeForm
+from .forms import UserUpdateForm, StudentUpdateForm, StudentRegistrationForm
+
 # Home Page View
 def home(request):
     """Home page view with featured courses and stats"""
@@ -62,9 +72,10 @@ def courses(request):
         'levels': Course.LEVEL_CHOICES,
         'selected_category': category,
         'selected_level': level,
-        'title': 'Our Courses - Taw Haa Zin Nurain Online Madarasa',
+        'title': 'Our Courses - Zin Nurain Online Madarasa',
     }
     return render(request, 'courses/course_list.html', context)
+
 
 def course_detail(request, course_id):
     """Display course details"""
@@ -91,16 +102,17 @@ def course_detail(request, course_id):
     }
     return render(request, 'courses/course_detail.html', context)
 
+
 @login_required
 def enroll_course(request, course_id):
-    """Enroll in a course"""
+    """Enroll in a course using student profile data"""
     course = get_object_or_404(Course, id=course_id, is_active=True)
+    student = getattr(request.user, 'student_profile', None)
     
-    if not hasattr(request.user, 'student_profile'):
-        messages.error(request, 'Please complete your student profile first.')
+    # Check if student profile exists
+    if not student:
+        messages.error(request, 'Please complete your student profile first before enrolling in courses.')
         return redirect('core:profile_settings')
-    
-    student = request.user.student_profile
     
     # Check if already enrolled
     existing_enrollment = Enrollment.objects.filter(
@@ -111,12 +123,12 @@ def enroll_course(request, course_id):
     
     if existing_enrollment:
         messages.info(request, 'You are already enrolled in this course.')
-        return redirect('course_detail', course_id=course_id)
+        return redirect('core:course_detail', course_id=course_id)
     
     # Check course availability
     if course.current_enrollment >= course.max_students:
         messages.error(request, 'This course is currently full. Please try another course or check back later.')
-        return redirect('course_detail', course_id=course_id)
+        return redirect('core:course_detail', course_id=course_id)
     
     if request.method == 'POST':
         form = EnrollmentForm(request.POST)
@@ -127,11 +139,47 @@ def enroll_course(request, course_id):
             enrollment.course_fee = course.base_fee
             enrollment.due_amount = course.base_fee
             
-            # Check if discount applies
+            # Set start date (next Monday)
+            from datetime import date, timedelta
+            today = date.today()
+            days_until_monday = (0 - today.weekday()) % 7  # Monday = 0
+            next_monday = today + timedelta(days=days_until_monday)
+            enrollment.start_date = next_monday
+            
+            # Calculate expected end date
+            expected_end_date = next_monday + timedelta(weeks=course.duration_weeks)
+            enrollment.expected_end_date = expected_end_date
+            
+            # Apply discount if available
             if course.discount_fee:
                 enrollment.course_fee = course.discount_fee
                 enrollment.discount_applied = course.base_fee - course.discount_fee
                 enrollment.due_amount = course.discount_fee
+            
+            # Set default values from student profile
+            enrollment.assigned_instructor = course.instructors.first() if course.instructors.exists() else None
+            enrollment.preferred_language = student.preferred_language
+            
+            # Set payment status
+            enrollment.payment_status = 'pending'
+            enrollment.enrollment_status = 'pending'  # Will be active after payment
+            
+            # Handle installments
+            if form.cleaned_data.get('is_installment'):
+                enrollment.is_installment = True
+                enrollment.installment_count = form.cleaned_data.get('installment_count', 1)
+                
+                # Calculate installment amount
+                if enrollment.installment_count > 1:
+                    installment_amount = enrollment.due_amount / enrollment.installment_count
+                    # Round to 2 decimal places
+                    installment_amount = round(installment_amount, 2)
+                    
+                    # Set next installment date (30 days from now)
+                    enrollment.next_installment_date = today + timedelta(days=30)
+            else:
+                enrollment.is_installment = False
+                enrollment.installment_count = 1
             
             enrollment.save()
             
@@ -139,19 +187,58 @@ def enroll_course(request, course_id):
             course.current_enrollment += 1
             course.save()
             
+            # Send enrollment confirmation email (optional)
+            try:
+                from django.core.mail import send_mail
+                send_mail(
+                    f'Enrollment Confirmation - {course.name}',
+                    f'Dear {student.full_name},\n\n'
+                    f'You have successfully enrolled in {course.name}.\n'
+                    f'Course Fee: ৳{enrollment.course_fee}\n'
+                    f'Payment Status: {enrollment.get_payment_status_display()}\n'
+                    f'Please complete your payment to start the course.\n\n'
+                    f'Thank you,\nTaw Haa Zin Nurain Online Madarasa',
+                    'no-reply@madarasa.com',
+                    [request.user.email],
+                    fail_silently=True,
+                )
+            except:
+                pass
+            
             messages.success(request, f'Successfully enrolled in {course.name}! Please complete payment to start classes.')
-            return redirect('make_payment', enrollment_id=enrollment.id)
+            return redirect('core:make_payment', enrollment_id=enrollment.id)
+        else:
+            messages.error(request, 'Please correct the errors in the form.')
     else:
-        form = EnrollmentForm(initial={
-            'class_time_slot': student.preferred_time_slot,
-        })
+        # GET request - initialize form
+        initial_data = {
+            'class_time_slot': '',
+            'is_installment': False,
+            'installment_count': 1,
+        }
+        form = EnrollmentForm(initial=initial_data)
+    
+    # Get available time slots
+    time_slots = []
+    if course.morning_slot:
+        time_slots.append(('morning', 'Morning (8:00 AM - 12:00 PM)'))
+    if course.afternoon_slot:
+        time_slots.append(('afternoon', 'Afternoon (2:00 PM - 6:00 PM)'))
+    if course.evening_slot:
+        time_slots.append(('evening', 'Evening (6:00 PM - 10:00 PM)'))
+    if course.night_slot:
+        time_slots.append(('night', 'Night (10:00 PM - 12:00 AM)'))
     
     context = {
         'course': course,
         'form': form,
+        'student': student,
+        'time_slots': time_slots,
         'title': f'Enroll in {course.name}',
     }
+    
     return render(request, 'courses/enroll.html', context)
+
 
 # Team Views
 def team(request):
@@ -532,11 +619,14 @@ def payment_history(request):
     
     # Get all payments for user's enrollments
     payments = Payment.objects.filter(enrollment__in=enrollments).order_by('-payment_date')
-    
+    due_enrollments = enrollments.filter(payment_status__in=['pending', 'partial'])
+
     context = {
         'payments': payments,
         'total_paid': payments.filter(is_verified=True).aggregate(Sum('amount'))['amount__sum'] or 0,
         'total_due': enrollments.filter(payment_status__in=['pending', 'partial']).aggregate(Sum('due_amount'))['due_amount__sum'] or 0,
+        'due_enrollments': due_enrollments,  # <-- pass this
+
         'title': 'Payment History - Taw Haa Zin Nurain Online Madarasa',
     }
     return render(request, 'dashboard/payment_history.html', context)
@@ -589,7 +679,7 @@ Taw Haa Zin Nurain Online Madarasa''',
             )
             
             messages.success(request, 'Payment submitted successfully! Please wait for verification.')
-            return redirect('payment_success', transaction_id=payment.transaction_id)
+            return redirect('core:payment_success', transaction_id=payment.transaction_id)
     else:
         form = PaymentForm(initial={
             'amount': enrollment.due_amount,
@@ -685,17 +775,9 @@ def schedule(request):
 
 
 
-# views.py
-from django.shortcuts import render, redirect, get_object_or_404
-from django.contrib.auth.decorators import login_required
-from django.contrib import messages
-from django.contrib.auth import update_session_auth_hash
-from django.contrib.auth.forms import PasswordChangeForm
-from .forms import UserUpdateForm, StudentUpdateForm, StudentRegistrationForm
-
 @login_required
 def profile_settings(request):
-    """User profile settings"""
+    """Simplified user profile settings"""
     student = getattr(request.user, 'student_profile', None)
     
     if request.method == 'POST':
@@ -712,17 +794,17 @@ def profile_settings(request):
                 
                 if student:
                     student_form.save()
+                    messages.success(request, 'Profile updated successfully!')
                 else:
                     student = student_form.save(commit=False)
                     student.user = request.user
-                    # Generate student ID
-                    import uuid
                     student.student_id = f"STU-{uuid.uuid4().hex[:8].upper()}"
                     student.save()
                     messages.success(request, 'Student profile created successfully!')
                 
-                messages.success(request, 'Profile updated successfully!')
                 return redirect('core:profile_settings')
+            else:
+                messages.error(request, 'Please correct the errors below.')
         
         elif 'change_password' in request.POST:
             password_form = PasswordChangeForm(request.user, request.POST)
@@ -731,7 +813,11 @@ def profile_settings(request):
                 update_session_auth_hash(request, user)
                 messages.success(request, 'Password changed successfully!')
                 return redirect('core:profile_settings')
+            else:
+                messages.error(request, 'Please correct password errors.')
+    
     else:
+        # GET request - initialize forms
         user_form = UserUpdateForm(instance=request.user)
         password_form = PasswordChangeForm(request.user)
         
@@ -743,11 +829,12 @@ def profile_settings(request):
     context = {
         'user_form': user_form,
         'student_form': student_form,
-        'password_form': password_form,
         'student': student,
-        'title': 'Profile Settings - Taw Haa Zin Nurain Online Madarasa',
+        'title': 'Profile Settings',
     }
+    
     return render(request, 'dashboard/profile_settings.html', context)
+
 
 
 

@@ -10,3 +10,15 @@ def subtract(value, arg):
         return int(value) - int(arg)
     except (ValueError, TypeError):
         return value
+    
+
+
+
+@register.filter
+def intcomma(value):
+    """Format number with commas"""
+    try:
+        value = float(value)
+        return "{:,.2f}".format(value)
+    except (ValueError, TypeError):
+        return value

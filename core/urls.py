@@ -1,5 +1,7 @@
 from django.urls import path
 from . import views
+from django.conf import settings
+from django.conf.urls.static import static
 
 app_name = 'core'
 
@@ -57,4 +59,9 @@ urlpatterns = [
     path('api/dashboard-stats/', views.get_dashboard_stats, name='dashboard_stats'),
     path('api/check-payment-reminders/', views.check_payment_reminders, name='check_payment_reminders'),
     path('api/update-progress/', views.update_progress, name='update_progress'),
-]
+] 
+
+
+
+if settings.DEBUG:
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

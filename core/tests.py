@@ -6,13 +6,13 @@ from django.test import TestCase
 """
 python manage.py makemigrations
 python manage.py migrate
-python manage.py createsuperuser
+# python manage.py createsuperuser
 python manage.py runserver
 
 git init
 
 git add .
-git commit -m "Fix navabr"
+git commit -m "Fix navabr Profile "
 git push -u origin main
 
 
@@ -30,7 +30,6 @@ git pull origin main
 git status
 
 
-pip freeze > requirements.txt
 
 
 #!/usr/bin/env bash

@@ -162,8 +162,7 @@ class Student(models.Model):
     previous_islamic_studies = models.TextField(blank=True)
     
     # Preferences
-    preferred_time_slot = models.CharField(max_length=50, blank=True)
-    preferred_language = models.CharField(max_length=50, default='Bangla')
+    preferred_language = models.CharField(max_length=50, blank=True, default='Bangla')
     
     # Status
     is_active = models.BooleanField(default=True)
@@ -530,7 +529,6 @@ class Notification(models.Model):
     def __str__(self):
         return f"{self.notification_type} - {self.recipient.username}"
     
-
 # Add to your existing models.py
 class ContactMessage(models.Model):
     SUBJECT_CHOICES = [
