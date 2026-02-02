@@ -17,6 +17,16 @@ urlpatterns = [
     path('courses/<uuid:course_id>/', views.course_detail, name='course_detail'),
     path('courses/<uuid:course_id>/enroll/', views.enroll_course, name='enroll_course'),
     
+
+    path('course/<uuid:course_id>/', views.learning_dashboard, name='dashboard'),
+    path('course/<uuid:course_id>/lesson/<uuid:lesson_id>/', views.lesson_view, name='lesson_view'),
+
+    #API Views
+    path('api/submit-mcq/', views.submit_mcq_response, name='submit_mcq'),
+    path('api/complete-lesson/<uuid:lesson_id>/', views.complete_lesson, name='complete_lesson'),
+    path('api/save-video-progress/', views.save_video_progress, name='save_video_progress'),
+
+
     # Team
     path('team/', views.team, name='team'),
     path('team/<uuid:instructor_id>/', views.instructor_detail, name='instructor_detail'),

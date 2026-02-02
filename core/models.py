@@ -254,6 +254,241 @@ class Enrollment(models.Model):
     def __str__(self):
         return f"{self.student.full_name} - {self.course.name}"
 
+
+# Add to your models.py
+
+class SelfLearningCourse(models.Model):
+    """Extended course model for self-learning features"""
+    course = models.OneToOneField(Course, on_delete=models.CASCADE, related_name='self_learning')
+    
+    # Self-learning specific fields
+    is_self_paced = models.BooleanField(default=True)
+    estimated_total_hours = models.IntegerField(default=0)
+    total_modules = models.IntegerField(default=0)
+    total_lessons = models.IntegerField(default=0)
+    total_quizzes = models.IntegerField(default=0)
+    certificate_available = models.BooleanField(default=True)
+    
+    # Access settings
+    access_duration_days = models.IntegerField(default=365)  # Days after enrollment
+    max_attempts_per_quiz = models.IntegerField(default=3)
+    
+    # Completion requirements
+    min_quiz_score = models.IntegerField(default=70)  # Percentage
+    require_final_exam = models.BooleanField(default=False)
+    
+    def __str__(self):
+        return f"Self Learning: {self.course.name}"
+
+class Module(models.Model):
+    """Learning module containing lessons"""
+    self_learning_course = models.ForeignKey(SelfLearningCourse, on_delete=models.CASCADE, related_name='modules')
+    
+    # Module details
+    title = models.CharField(max_length=200)
+    description = models.TextField()
+    order = models.IntegerField()  # For sequencing
+    duration_minutes = models.IntegerField(default=0)
+    
+    # Metadata
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        ordering = ['order']
+    
+    def __str__(self):
+        return f"{self.order}. {self.title}"
+
+class Lesson(models.Model):
+    """Individual lesson with video content"""
+    LESSON_TYPES = [
+        ('video', 'Video Lesson'),
+        ('article', 'Text Article'),
+        ('quiz', 'Quiz'),
+        ('assignment', 'Assignment'),
+    ]
+    
+    module = models.ForeignKey(Module, on_delete=models.CASCADE, related_name='lessons')
+    
+    # Lesson details
+    title = models.CharField(max_length=200)
+    lesson_type = models.CharField(max_length=20, choices=LESSON_TYPES, default='video')
+    description = models.TextField(blank=True)
+    content = models.TextField(blank=True)  # For articles
+    youtube_url = models.URLField(blank=True)  # For videos
+    duration_minutes = models.IntegerField(default=0)
+    order = models.IntegerField()  # For sequencing within module
+    
+    # Requirements
+    is_required = models.BooleanField(default=True)
+    prerequisite_lessons = models.ManyToManyField('self', symmetrical=False, blank=True)
+    
+    # Progress tracking
+    points_value = models.IntegerField(default=10)  # Points earned on completion
+    
+    # Metadata
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        ordering = ['order']
+    
+    def get_youtube_id(self):
+        """Extract YouTube video ID from URL"""
+        if not self.youtube_url:
+            return None
+        import re
+        pattern = r'(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})'
+        match = re.search(pattern, self.youtube_url)
+        return match.group(1) if match else None
+    
+    def __str__(self):
+        return f"{self.module.order}.{self.order} {self.title}"
+
+class InteractiveMCQ(models.Model):
+    """MCQ that appears during video playback"""
+    lesson = models.ForeignKey(Lesson, on_delete=models.CASCADE, related_name='mcqs')
+    
+    # Question details
+    question = models.TextField()
+    question_type = models.CharField(max_length=20, choices=[
+        ('single', 'Single Correct'),
+        ('multiple', 'Multiple Correct'),
+    ], default='single')
+    
+    # Timing in video (seconds)
+    appear_at_second = models.IntegerField()
+    time_limit_seconds = models.IntegerField(default=60)
+    
+    # Points and requirements
+    points_value = models.IntegerField(default=5)
+    is_required = models.BooleanField(default=True)
+    allow_skip = models.BooleanField(default=False)
+    
+    # Attempt limits
+    max_attempts = models.IntegerField(default=1)
+    
+    def __str__(self):
+        return f"MCQ at {self.appear_at_second}s: {self.question[:50]}..."
+
+class MCQOption(models.Model):
+    """Options for MCQ questions"""
+    mcq = models.ForeignKey(InteractiveMCQ, on_delete=models.CASCADE, related_name='options')
+    
+    # Option details
+    text = models.TextField()
+    is_correct = models.BooleanField(default=False)
+    explanation = models.TextField(blank=True)  # Shown when answered
+    
+    order = models.IntegerField(default=0)
+    
+    class Meta:
+        ordering = ['order']
+    
+    def __str__(self):
+        return f"{self.text[:50]}..."
+
+class StudentLessonProgress(models.Model):
+    """Tracks student progress through lessons"""
+    student = models.ForeignKey(Student, on_delete=models.CASCADE, related_name='lesson_progress')
+    lesson = models.ForeignKey(Lesson, on_delete=models.CASCADE, related_name='student_progress')
+    
+    # Progress tracking
+    STATUS_CHOICES = [
+        ('not_started', 'Not Started'),
+        ('in_progress', 'In Progress'),
+        ('completed', 'Completed'),
+        ('locked', 'Locked'),
+    ]
+    
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='not_started')
+    started_at = models.DateTimeField(null=True, blank=True)
+    completed_at = models.DateTimeField(null=True, blank=True)
+    last_accessed = models.DateTimeField(auto_now=True)
+    
+    # Video-specific tracking
+    video_progress_seconds = models.IntegerField(default=0)
+    video_watch_duration = models.IntegerField(default=0)  # Total seconds watched
+    
+    # Points earned
+    points_earned = models.IntegerField(default=0)
+    
+    # Quiz attempts
+    quiz_attempts = models.IntegerField(default=0)
+    best_quiz_score = models.IntegerField(null=True, blank=True)
+    
+    class Meta:
+        unique_together = ['student', 'lesson']
+    
+    def __str__(self):
+        return f"{self.student.full_name} - {self.lesson.title} ({self.status})"
+
+class StudentMCQResponse(models.Model):
+    """Records student responses to interactive MCQs"""
+    student = models.ForeignKey(Student, on_delete=models.CASCADE, related_name='mcq_responses')
+    mcq = models.ForeignKey(InteractiveMCQ, on_delete=models.CASCADE, related_name='responses')
+    
+    # Response details
+    selected_options = models.ManyToManyField(MCQOption, related_name='selected_in_responses')
+    is_correct = models.BooleanField()
+    points_earned = models.IntegerField(default=0)
+    
+    # Timing
+    response_time_seconds = models.IntegerField()
+    attempted_at = models.DateTimeField(auto_now_add=True)
+    
+    def __str__(self):
+        return f"{self.student.full_name} - MCQ {self.mcq.id}"
+
+class StudentCourseProgress(models.Model):
+    """Overall course progress tracking"""
+    student = models.ForeignKey(Student, on_delete=models.CASCADE, related_name='course_progress')
+    course = models.ForeignKey(Course, on_delete=models.CASCADE, related_name='student_course_progress')
+    
+    # Progress metrics
+    overall_progress = models.IntegerField(default=0)  # Percentage
+    completed_modules = models.IntegerField(default=0)
+    completed_lessons = models.IntegerField(default=0)
+    total_points = models.IntegerField(default=0)
+    
+    # Time tracking
+    started_at = models.DateTimeField(auto_now_add=True)
+    last_accessed = models.DateTimeField(auto_now=True)
+    estimated_completion_date = models.DateField(null=True, blank=True)
+    
+    # Current position
+    current_module = models.ForeignKey(Module, on_delete=models.SET_NULL, null=True, blank=True)
+    current_lesson = models.ForeignKey(Lesson, on_delete=models.SET_NULL, null=True, blank=True)
+    
+    class Meta:
+        unique_together = ['student', 'course']
+    
+    def update_progress(self):
+        """Recalculate progress"""
+        total_lessons = Lesson.objects.filter(
+            module__self_learning_course__course=self.course,
+            is_required=True
+        ).count()
+        
+        completed_lessons = StudentLessonProgress.objects.filter(
+            student=self.student,
+            lesson__module__self_learning_course__course=self.course,
+            status='completed'
+        ).count()
+        
+        if total_lessons > 0:
+            self.overall_progress = int((completed_lessons / total_lessons) * 100)
+        
+        self.save()
+    
+    def __str__(self):
+        return f"{self.student.full_name} - {self.course.name} ({self.overall_progress}%)"
+
+
+
+
 class Payment(models.Model):
     PAYMENT_METHODS = [
         ('bkash', 'bKash'),

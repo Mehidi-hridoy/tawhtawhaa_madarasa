@@ -1,0 +1,201 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row">
+        <!-- Course Header -->
+        <div class="col-12 mb-4">
+            <div class="card shadow">
+                <div class="card-body">
+                    <div class="row align-items-center">
+                        <div class="col-md-8">
+                            <h1 class="h3 mb-2">{{ course.name }}</h1>
+                            <p class="text-muted mb-2">{{ course.short_description }}</p>
+                            <div class="d-flex align-items-center">
+                                <div class="progress flex-grow-1 me-3" style="height: 10px;">
+                                    <div class="progress-bar bg-success" 
+                                         role="progressbar" 
+                                         style="width: {{ course_progress.overall_progress }}%">
+                                    </div>
+                                </div>
+                                <span class="fw-bold">{{ course_progress.overall_progress }}%</span>
+                            </div>
+                        </div>
+                        <div class="col-md-4 text-end">
+                            <div class="d-grid gap-2">
+                                {% if course_progress.current_lesson %}
+                                <a href="{% url 'learning:lesson_view' course.id course_progress.current_lesson.id %}" 
+                                   class="btn btn-primary">
+                                    Continue Learning
+                                </a>
+                                {% endif %}
+                                <a href="{% url 'dashboard:my_courses' %}" class="btn btn-outline-secondary">
+                                    Back to Courses
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modules List -->
+        <div class="col-lg-8">
+            <div class="card shadow">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0">Course Content</h5>
+                </div>
+                <div class="card-body">
+                    <div class="accordion" id="modulesAccordion">
+                        {% for module in modules %}
+                        <div class="accordion-item">
+                            <h2 class="accordion-header">
+                                <button class="accordion-button {% if not forloop.first %}collapsed{% endif %}" 
+                                        type="button" 
+                                        data-bs-toggle="collapse" 
+                                        data-bs-target="#module{{ module.id }}">
+                                    <div class="d-flex w-100 justify-content-between align-items-center">
+                                        <div>
+                                            <span class="badge bg-primary me-2">Module {{ module.order }}</span>
+                                            <strong>{{ module.title }}</strong>
+                                        </div>
+                                        <div class="text-muted small">
+                                            {{ module.duration_minutes }} min
+                                        </div>
+                                    </div>
+                                </button>
+                            </h2>
+                            <div id="module{{ module.id }}" 
+                                 class="accordion-collapse collapse {% if forloop.first %}show{% endif %}" 
+                                 data-bs-parent="#modulesAccordion">
+                                <div class="accordion-body p-0">
+                                    <div class="list-group list-group-flush">
+                                        {% for lesson in module.lessons.all %}
+                                        <div class="list-group-item d-flex align-items-center">
+                                            <div class="me-3">
+                                                {% if lesson.lesson_type == 'video' %}
+                                                <i class="fas fa-play-circle text-primary"></i>
+                                                {% elif lesson.lesson_type == 'article' %}
+                                                <i class="fas fa-file-alt text-info"></i>
+                                                {% elif lesson.lesson_type == 'quiz' %}
+                                                <i class="fas fa-question-circle text-warning"></i>
+                                                {% endif %}
+                                            </div>
+                                            <div class="flex-grow-1">
+                                                <div class="d-flex justify-content-between">
+                                                    <div>
+                                                        <h6 class="mb-1">{{ lesson.title }}</h6>
+                                                        <p class="mb-0 text-muted small">{{ lesson.description|truncatechars:100 }}</p>
+                                                    </div>
+                                                    <div class="text-end">
+                                                        <div class="small text-muted">{{ lesson.duration_minutes }} min</div>
+                                                        {% if lesson.progress.status == 'completed' %}
+                                                        <span class="badge bg-success">Completed</span>
+                                                        {% elif lesson.progress.status == 'in_progress' %}
+                                                        <span class="badge bg-warning">In Progress</span>
+                                                        {% elif lesson.progress.status == 'locked' %}
+                                                        <span class="badge bg-secondary">Locked</span>
+                                                        {% else %}
+                                                        <span class="badge bg-light text-dark">Not Started</span>
+                                                        {% endif %}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="ms-3">
+                                                {% if lesson.progress.status != 'locked' %}
+                                                <a href="{% url 'learning:lesson_view' course.id lesson.id %}" 
+                                                   class="btn btn-sm btn-outline-primary">
+                                                    {% if lesson.progress.status == 'completed' %}
+                                                    Review
+                                                    {% else %}
+                                                    Start
+                                                    {% endif %}
+                                                </a>
+                                                {% else %}
+                                                <button class="btn btn-sm btn-outline-secondary" disabled>
+                                                    Locked
+                                                </button>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Course Stats Sidebar -->
+        <div class="col-lg-4">
+            <div class="card shadow mb-4">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0">Course Stats</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row text-center">
+                        <div class="col-6 mb-3">
+                            <div class="display-6 fw-bold text-primary">{{ course_progress.completed_lessons }}</div>
+                            <div class="text-muted small">Lessons Completed</div>
+                        </div>
+                        <div class="col-6 mb-3">
+                            <div class="display-6 fw-bold text-success">{{ course_progress.total_points }}</div>
+                            <div class="text-muted small">Points Earned</div>
+                        </div>
+                    </div>
+                    <hr>
+                    <div class="mb-3">
+                        <div class="d-flex justify-content-between mb-1">
+                            <span>Modules Progress</span>
+                            <span>{{ course_progress.completed_modules }}/{{ self_learning.total_modules }}</span>
+                        </div>
+                        <div class="progress" style="height: 8px;">
+                            <div class="progress-bar bg-info" 
+                                 style="width: {% widthratio course_progress.completed_modules self_learning.total_modules 100 %}%">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <div class="d-flex justify-content-between mb-1">
+                            <span>Time Spent</span>
+                            <span>{{ total_watch_time|default:0 }} min</span>
+                        </div>
+                    </div>
+                    {% if self_learning.certificate_available and course_progress.overall_progress == 100 %}
+                    <div class="alert alert-success">
+                        <i class="fas fa-award me-2"></i>
+                        Certificate Available!
+                        <a href="#" class="btn btn-sm btn-outline-success float-end">Download</a>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Quick Actions -->
+            <div class="card shadow">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0">Quick Actions</h5>
+                </div>
+                <div class="card-body">
+                    <div class="d-grid gap-2">
+                        <a href="#" class="btn btn-outline-primary">
+                            <i class="fas fa-download me-2"></i>Download Materials
+                        </a>
+                        <a href="#" class="btn btn-outline-info">
+                            <i class="fas fa-question-circle me-2"></i>Ask Instructor
+                        </a>
+                        <a href="#" class="btn btn-outline-warning">
+                            <i class="fas fa-bookmark me-2"></i>Bookmark Lesson
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+

@@ -1,9 +1,8 @@
 from django.contrib import admin
 from .models import (
     Course, Instructor, Student, Enrollment, Payment, BlogPost, Gallery,
-    Donation, FAQ, Office, Notification, ContactMessage
+    Donation, FAQ, Office, Notification, ContactMessage, SelfLearningCourse, Module, Lesson, InteractiveMCQ, StudentLessonProgress
 )
-
 # -------------------------------
 # Course Admin
 # -------------------------------
@@ -124,3 +123,46 @@ class ContactMessageAdmin(admin.ModelAdmin):
     list_filter = ('status', 'priority', 'is_read', 'is_important')
     search_fields = ('name', 'email', 'phone', 'subject', 'message')
     ordering = ('-received_at',)
+
+
+# admin.py
+from django.contrib import admin
+from .models import SelfLearningCourse, Module, Lesson, InteractiveMCQ, MCQOption
+
+@admin.register(SelfLearningCourse)
+class SelfLearningCourseAdmin(admin.ModelAdmin):
+    list_display = ['course', 'is_self_paced', 'total_modules', 'total_lessons']
+    list_filter = ['is_self_paced', 'certificate_available']
+    search_fields = ['course__name']
+
+@admin.register(Module)
+class ModuleAdmin(admin.ModelAdmin):
+    list_display = ['title', 'self_learning_course', 'order', 'duration_minutes', 'is_active']
+    list_filter = ['is_active', 'self_learning_course']
+    ordering = ['self_learning_course', 'order']
+    search_fields = ['title', 'description']
+
+@admin.register(Lesson)
+class LessonAdmin(admin.ModelAdmin):
+    list_display = ['title', 'module', 'lesson_type', 'order', 'duration_minutes', 'is_required']
+    list_filter = ['lesson_type', 'is_required', 'module']
+    ordering = ['module', 'order']
+    search_fields = ['title', 'description']
+    filter_horizontal = ['prerequisite_lessons']
+
+class MCQOptionInline(admin.TabularInline):
+    model = MCQOption
+    extra = 4
+
+@admin.register(InteractiveMCQ)
+class InteractiveMCQAdmin(admin.ModelAdmin):
+    list_display = ['question', 'lesson', 'appear_at_second', 'question_type', 'is_required']
+    list_filter = ['question_type', 'is_required', 'lesson']
+    search_fields = ['question']
+    inlines = [MCQOptionInline]
+
+@admin.register(StudentLessonProgress)
+class StudentLessonProgressAdmin(admin.ModelAdmin):
+    list_display = ['student', 'lesson', 'status', 'video_progress_seconds', 'points_earned']
+    list_filter = ['status', 'lesson__module__self_learning_course__course']
+    search_fields = ['student__full_name', 'lesson__title']

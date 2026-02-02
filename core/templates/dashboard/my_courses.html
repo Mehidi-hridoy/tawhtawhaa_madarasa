@@ -1,5 +1,6 @@
 {% extends 'base.html' %}
 {% load static %}
+{% load custom_filters %}
 
 {% block title %}{{ title }}{% endblock %}
 
@@ -60,7 +61,7 @@
                                     {% with total=total|add:enrollment.assignment_completion %}
                                     {% endwith %}
                                     {% endfor %}
-                                    {{ total|div:enrollments.count|floatformat:0 }}%
+                                    {{ total|div:enrollments.count}}%
                                     {% endwith %}
                                 </h3>
                             </div>

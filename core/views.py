@@ -13,9 +13,6 @@ import json
 from .models import *
 from .forms import *
 from django.contrib.auth.decorators import user_passes_test
-
-
-
 # views.py
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
@@ -77,27 +74,40 @@ def courses(request):
     return render(request, 'courses/course_list.html', context)
 
 
+
 def course_detail(request, course_id):
     """Display course details"""
     course = get_object_or_404(Course, id=course_id, is_active=True)
+
     related_courses = Course.objects.filter(
         category=course.category,
         is_active=True
     ).exclude(id=course.id)[:3]
-    
-    # Check if user is enrolled
+
+    enrollment = None
     is_enrolled = False
+    is_pending = False
+    is_active = False
+
     if request.user.is_authenticated and hasattr(request.user, 'student_profile'):
-        is_enrolled = Enrollment.objects.filter(
+        enrollment = Enrollment.objects.filter(
             student=request.user.student_profile,
-            course=course,
-            enrollment_status__in=['active', 'completed']
-        ).exists()
-    
+            course=course
+        ).first()
+
+        if enrollment:
+            is_enrolled = True
+            if enrollment.enrollment_status == 'pending':
+                is_pending = True
+            elif enrollment.enrollment_status in ['active', 'completed']:
+                is_active = True
+
     context = {
         'course': course,
         'related_courses': related_courses,
         'is_enrolled': is_enrolled,
+        'is_pending': is_pending,
+        'is_active': is_active,
         'title': f'{course.name} - Taw Haa Zin Nurain Online Madarasa',
     }
     return render(request, 'courses/course_detail.html', context)
@@ -238,6 +248,385 @@ def enroll_course(request, course_id):
     }
     
     return render(request, 'courses/enroll.html', context)
+
+
+
+@login_required
+def learning_dashboard(request, course_id):
+    """Main learning dashboard for a course"""
+    if not hasattr(request.user, 'student_profile'):
+        messages.error(request, 'Please complete your student profile first.')
+        return redirect('core:profile_settings')
+    
+    try:
+        course = Course.objects.get(id=course_id)
+        enrollment = Enrollment.objects.get(
+            student=request.user.student_profile,
+            course=course,
+            enrollment_status='active'
+        )
+    except (Course.DoesNotExist, Enrollment.DoesNotExist):
+        messages.error(request, 'Course not found or you are not enrolled.')
+        return redirect('dashboard:my_courses')
+    
+    # Get or create course progress
+    course_progress, created = StudentCourseProgress.objects.get_or_create(
+        student=request.user.student_profile,
+        course=course
+    )
+    
+    # Get modules and lessons
+    try:
+        self_learning = course.self_learning
+        modules = self_learning.modules.all().prefetch_related('lessons')
+        
+        # Get student progress for each lesson
+        for module in modules:
+            for lesson in module.lessons.all():
+                lesson.progress, _ = StudentLessonProgress.objects.get_or_create(
+                    student=request.user.student_profile,
+                    lesson=lesson,
+                    defaults={'status': 'locked'}
+                )
+                # Check if lesson should be unlocked
+                if lesson.order == 1 and module.order == 1:
+                    lesson.progress.status = 'not_started'
+                    lesson.progress.save()
+                elif lesson.prerequisite_lessons.exists():
+                    # Check if all prerequisites are completed
+                    prerequisites = lesson.prerequisite_lessons.all()
+                    completed_prerequisites = StudentLessonProgress.objects.filter(
+                        student=request.user.student_profile,
+                        lesson__in=prerequisites,
+                        status='completed'
+                    ).count()
+                    if completed_prerequisites == prerequisites.count():
+                        lesson.progress.status = 'not_started'
+                        lesson.progress.save()
+    
+    except Course.self_learning.RelatedObjectDoesNotExist:
+        messages.error(request, 'This course is not available for self-learning.')
+        return redirect('dashboard:my_courses')
+    
+    context = {
+        'course': course,
+        'self_learning': self_learning,
+        'modules': modules,
+        'course_progress': course_progress,
+        'enrollment': enrollment,
+        'title': f'Learning - {course.name}',
+    }
+    
+    return render(request, 'learning/dashboard.html', context)
+
+@login_required
+def lesson_view(request, course_id, lesson_id):
+    """View for individual lesson with interactive video"""
+    if not hasattr(request.user, 'student_profile'):
+        messages.error(request, 'Please complete your student profile first.')
+        return redirect('core:profile_settings')
+    
+    try:
+        lesson = Lesson.objects.get(id=lesson_id, module__self_learning_course__course_id=course_id)
+        student = request.user.student_profile
+        
+        # Get or create lesson progress
+        progress, created = StudentLessonProgress.objects.get_or_create(
+            student=student,
+            lesson=lesson,
+            defaults={'status': 'in_progress', 'started_at': timezone.now()}
+        )
+        
+        if progress.status == 'not_started':
+            progress.status = 'in_progress'
+            progress.started_at = timezone.now()
+            progress.save()
+        
+        # Update last accessed
+        progress.last_accessed = timezone.now()
+        progress.save()
+        
+        # Update course progress current position
+        course_progress, _ = StudentCourseProgress.objects.get_or_create(
+            student=student,
+            course_id=course_id
+        )
+        course_progress.current_lesson = lesson
+        course_progress.current_module = lesson.module
+        course_progress.last_accessed = timezone.now()
+        course_progress.save()
+        
+        # Get interactive MCQs for this lesson
+        mcqs = InteractiveMCQ.objects.filter(lesson=lesson).prefetch_related('options')
+        
+        # Prepare MCQs data for JavaScript
+        mcqs_data = []
+        for mcq in mcqs:
+            mcqs_data.append({
+                'id': mcq.id,
+                'question': mcq.question,
+                'type': mcq.question_type,
+                'appear_at': mcq.appear_at_second,
+                'time_limit': mcq.time_limit_seconds,
+                'allow_skip': mcq.allow_skip,
+                'max_attempts': mcq.max_attempts,
+                'options': [
+                    {
+                        'id': option.id,
+                        'text': option.text,
+                        'is_correct': option.is_correct
+                    } for option in mcq.options.all()
+                ]
+            })
+        
+    except Lesson.DoesNotExist:
+        messages.error(request, 'Lesson not found.')
+        return redirect('learning:dashboard', course_id=course_id)
+    
+    context = {
+        'lesson': lesson,
+        'progress': progress,
+        'course': lesson.module.self_learning_course.course,
+        'youtube_id': lesson.get_youtube_id(),
+        'mcqs_json': json.dumps(mcqs_data),
+        'title': f'{lesson.title} - {lesson.module.self_learning_course.course.name}',
+    }
+    
+    return render(request, 'learning/lesson_view.html', context)
+
+@login_required
+def submit_mcq_response(request):
+    """Handle MCQ responses from video"""
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Invalid method'}, status=400)
+    
+    if not hasattr(request.user, 'student_profile'):
+        return JsonResponse({'error': 'Authentication required'}, status=401)
+    
+    try:
+        data = json.loads(request.body)
+        mcq_id = data.get('mcq_id')
+        selected_option_ids = data.get('selected_options', [])
+        response_time = data.get('response_time', 0)
+        video_time = data.get('video_time', 0)
+        
+        mcq = InteractiveMCQ.objects.get(id=mcq_id)
+        student = request.user.student_profile
+        
+        # Check if student has reached attempt limit
+        attempts = StudentMCQResponse.objects.filter(
+            student=student,
+            mcq=mcq
+        ).count()
+        
+        if attempts >= mcq.max_attempts:
+            return JsonResponse({
+                'error': 'Maximum attempts reached',
+                'max_attempts': mcq.max_attempts
+            }, status=400)
+        
+        # Get selected options
+        selected_options = MCQOption.objects.filter(id__in=selected_option_ids)
+        
+        # Check if answer is correct
+        is_correct = True
+        correct_options = mcq.options.filter(is_correct=True)
+        
+        if mcq.question_type == 'single':
+            is_correct = selected_options.count() == 1 and selected_options.first().is_correct
+        else:  # multiple
+            selected_correct = selected_options.filter(is_correct=True).count()
+            is_correct = (selected_correct == correct_options.count() and 
+                         selected_options.count() == correct_options.count())
+        
+        # Calculate points earned
+        points_earned = mcq.points_value if is_correct else 0
+        
+        # Save response
+        response = StudentMCQResponse.objects.create(
+            student=student,
+            mcq=mcq,
+            is_correct=is_correct,
+            response_time_seconds=response_time,
+            points_earned=points_earned
+        )
+        response.selected_options.set(selected_options)
+        
+        # Update lesson progress
+        lesson_progress, _ = StudentLessonProgress.objects.get_or_create(
+            student=student,
+            lesson=mcq.lesson
+        )
+        
+        # Update video progress if needed
+        if video_time > lesson_progress.video_progress_seconds:
+            lesson_progress.video_progress_seconds = video_time
+        
+        # Add points
+        lesson_progress.points_earned += points_earned
+        lesson_progress.save()
+        
+        # Update course points
+        course_progress, _ = StudentCourseProgress.objects.get_or_create(
+            student=student,
+            course=mcq.lesson.module.self_learning_course.course
+        )
+        course_progress.total_points += points_earned
+        course_progress.save()
+        
+        # Prepare response with explanations
+        explanations = []
+        for option in mcq.options.all():
+            if option.explanation:
+                explanations.append({
+                    'option_id': option.id,
+                    'explanation': option.explanation,
+                    'is_correct': option.is_correct
+                })
+        
+        return JsonResponse({
+            'success': True,
+            'is_correct': is_correct,
+            'points_earned': points_earned,
+            'total_points': course_progress.total_points,
+            'attempts_made': attempts + 1,
+            'max_attempts': mcq.max_attempts,
+            'explanations': explanations,
+            'correct_options': list(correct_options.values_list('id', flat=True))
+        })
+        
+    except json.JSONDecodeError:
+        return JsonResponse({'error': 'Invalid JSON'}, status=400)
+    except InteractiveMCQ.DoesNotExist:
+        return JsonResponse({'error': 'MCQ not found'}, status=404)
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+@login_required
+def complete_lesson(request, lesson_id):
+    """Mark lesson as completed"""
+    if not hasattr(request.user, 'student_profile'):
+        return JsonResponse({'error': 'Authentication required'}, status=401)
+    
+    try:
+        lesson = Lesson.objects.get(id=lesson_id)
+        student = request.user.student_profile
+        
+        progress = StudentLessonProgress.objects.get(
+            student=student,
+            lesson=lesson
+        )
+        
+        # Check if all required MCQs are answered
+        required_mcqs = InteractiveMCQ.objects.filter(
+            lesson=lesson,
+            is_required=True
+        )
+        
+        for mcq in required_mcqs:
+            responses = StudentMCQResponse.objects.filter(
+                student=student,
+                mcq=mcq
+            )
+            if not responses.exists():
+                return JsonResponse({
+                    'error': f'Please complete all required questions: {mcq.question[:50]}...'
+                }, status=400)
+        
+        # Mark as completed
+        progress.status = 'completed'
+        progress.completed_at = timezone.now()
+        progress.points_earned += lesson.points_value
+        progress.save()
+        
+        # Update course progress
+        course_progress, _ = StudentCourseProgress.objects.get_or_create(
+            student=student,
+            course=lesson.module.self_learning_course.course
+        )
+        course_progress.total_points += lesson.points_value
+        course_progress.update_progress()
+        
+        # Check if next lesson should be unlocked
+        next_lesson = Lesson.objects.filter(
+            module=lesson.module,
+            order=lesson.order + 1
+        ).first()
+        
+        if not next_lesson:
+            next_lesson = Lesson.objects.filter(
+                module__order=lesson.module.order + 1,
+                order=1
+            ).first()
+        
+        next_lesson_url = None
+        if next_lesson:
+            # Unlock next lesson
+            next_progress, _ = StudentLessonProgress.objects.get_or_create(
+                student=student,
+                lesson=next_lesson
+            )
+            if next_progress.status == 'locked':
+                next_progress.status = 'not_started'
+                next_progress.save()
+            
+            next_lesson_url = reverse('learning:lesson_view', kwargs={
+                'course_id': lesson.module.self_learning_course.course.id,
+                'lesson_id': next_lesson.id
+            })
+        
+        return JsonResponse({
+            'success': True,
+            'lesson_completed': True,
+            'next_lesson_url': next_lesson_url,
+            'course_progress': course_progress.overall_progress,
+            'total_points': course_progress.total_points
+        })
+        
+    except (Lesson.DoesNotExist, StudentLessonProgress.DoesNotExist):
+        return JsonResponse({'error': 'Lesson not found'}, status=404)
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+@login_required
+def save_video_progress(request):
+    """Save video watch progress"""
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Invalid method'}, status=400)
+    
+    if not hasattr(request.user, 'student_profile'):
+        return JsonResponse({'error': 'Authentication required'}, status=401)
+    
+    try:
+        data = json.loads(request.body)
+        lesson_id = data.get('lesson_id')
+        progress_seconds = data.get('progress_seconds')
+        watch_duration = data.get('watch_duration')
+        
+        student = request.user.student_profile
+        lesson = Lesson.objects.get(id=lesson_id)
+        
+        progress, created = StudentLessonProgress.objects.get_or_create(
+            student=student,
+            lesson=lesson
+        )
+        
+        # Only update if new progress is greater
+        if progress_seconds > progress.video_progress_seconds:
+            progress.video_progress_seconds = progress_seconds
+        
+        # Add to total watch duration
+        progress.video_watch_duration += watch_duration
+        progress.save()
+        
+        return JsonResponse({'success': True})
+        
+    except json.JSONDecodeError:
+        return JsonResponse({'error': 'Invalid JSON'}, status=400)
+    except Lesson.DoesNotExist:
+        return JsonResponse({'error': 'Lesson not found'}, status=404)
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
 
 
 # Team Views
@@ -1034,7 +1423,6 @@ def search(request):
         'title': f'Search Results: {query} - Taw Haa Zin Nurain Online Madarasa',
     }
     return render(request, 'search/results.html', context)
-
 
 
 # Update the existing contact view with more functionality

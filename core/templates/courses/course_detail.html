@@ -261,29 +261,46 @@
                             {% endif %}
                         </ul>
                     </div>
-                    
                     {% if course.current_enrollment < course.max_students %}
-                    <div class="d-grid gap-2">
-                        {% if is_enrolled %}
-                        <button class="btn btn-success" disabled>
-                            <i class="fas fa-check-circle me-2"></i>Already Enrolled
-                        </button>
-                        <a href="{% url 'core:dashboard' %}" class="btn btn-outline-primary">
-                            Go to Dashboard
-                        </a>
-                        {% else %}
-                        <a href="{% url 'core:enroll_course' course.id %}" class="btn btn-primary btn-lg py-3">
-                            <i class="fas fa-user-plus me-2"></i>Enroll Now
-                        </a>
-                        {% endif %}
-                    </div>
-                    {% else %}
-                    <div class="alert alert-warning">
-                        <i class="fas fa-exclamation-triangle me-2"></i>
-                        This course is currently full. Please check back later.
-                    </div>
-                    {% endif %}
-                    
+    <div class="d-grid gap-2">
+
+        {% if is_active %}
+            <!-- Approved enrollment -->
+            <button class="btn btn-success" disabled>
+                <i class="fas fa-check-circle me-2"></i>
+                Enrolled (Approved)
+            </button>
+            <a href="{% url 'core:dashboard' %}" class="btn btn-outline-primary">
+                Go to Dashboard
+            </a>
+
+        {% elif is_pending %}
+            <!-- Pending admin approval -->
+            <button class="btn btn-secondary" disabled>
+                <i class="fas fa-hourglass-half me-2"></i>
+                Registration Pending
+            </button>
+            <div class="alert alert-info mt-2 text-center">
+                You have registered for this course.<br>
+                Please wait for admin confirmation.
+            </div>
+
+        {% else %}
+            <!-- Not enrolled -->
+            <a href="{% url 'core:enroll_course' course.id %}" class="btn btn-primary btn-lg py-3">
+                <i class="fas fa-user-plus me-2"></i>
+                Enroll Now
+            </a>
+
+        {% endif %}
+    </div>
+{% else %}
+    <div class="alert alert-warning">
+        <i class="fas fa-exclamation-triangle me-2"></i>
+        This course is currently full. Please check back later.
+    </div>
+{% endif %}
+
                     <div class="text-center mt-4">
                         <small class="text-muted">
                             <i class="fas fa-lock me-1"></i>

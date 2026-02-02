@@ -12,8 +12,6 @@ def subtract(value, arg):
         return value
     
 
-
-
 @register.filter
 def intcomma(value):
     """Format number with commas"""
@@ -22,3 +20,12 @@ def intcomma(value):
         return "{:,.2f}".format(value)
     except (ValueError, TypeError):
         return value
+
+
+@register.filter
+def div(value, arg):
+    try:
+        return float(value) / float(arg)
+    except (ValueError, ZeroDivisionError, TypeError):
+        return 0
+
