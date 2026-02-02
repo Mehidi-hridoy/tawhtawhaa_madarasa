@@ -65,8 +65,10 @@
                                            style="bottom: 5px; right: 5px; width: 35px; height: 35px; line-height: 35px; cursor: pointer;">
                                         <i class="fas fa-camera"></i>
                                     </label>
+                                    {% if student_form %}
                                     <input type="file" name="profile_picture" id="id_profile_picture" 
                                            class="d-none" accept="image/*">
+                                    {% endif %}
                                 </div>
                             </div>
 
@@ -96,6 +98,7 @@
                                     <div class="text-danger small">{{ user_form.email.errors.0 }}</div>
                                     {% endif %}
                                 </div>
+                                {% if student_form %}
                                 <div class="col-md-6 mb-3">
                                     <label class="form-label">Phone *</label>
                                     {{ student_form.phone }}
@@ -103,9 +106,11 @@
                                     <div class="text-danger small">{{ student_form.phone.errors.0 }}</div>
                                     {% endif %}
                                 </div>
+                                {% endif %}
                             </div>
 
                             <!-- Student Info -->
+                            {% if student_form %}
                             <hr class="my-4">
                             
                             <div class="row">
@@ -117,7 +122,7 @@
                                     {% endif %}
                                 </div>
                                 <div class="col-md-6 mb-3">
-                                    <label class="form-label">Date of Birth *</label>
+                                    <label class="form-label">Date of Birth</label>
                                     {{ student_form.date_of_birth }}
                                     {% if student_form.date_of_birth.errors %}
                                     <div class="text-danger small">{{ student_form.date_of_birth.errors.0 }}</div>
@@ -127,14 +132,14 @@
 
                             <div class="row">
                                 <div class="col-md-6 mb-3">
-                                    <label class="form-label">Gender *</label>
+                                    <label class="form-label">Gender</label>
                                     {{ student_form.gender }}
                                     {% if student_form.gender.errors %}
                                     <div class="text-danger small">{{ student_form.gender.errors.0 }}</div>
                                     {% endif %}
                                 </div>
                                 <div class="col-md-6 mb-3">
-                                    <label class="form-label">Country *</label>
+                                    <label class="form-label">Country</label>
                                     {{ student_form.country }}
                                     {% if student_form.country.errors %}
                                     <div class="text-danger small">{{ student_form.country.errors.0 }}</div>
@@ -144,7 +149,7 @@
 
                             <div class="row">
                                 <div class="col-md-6 mb-3">
-                                    <label class="form-label">City *</label>
+                                    <label class="form-label">City</label>
                                     {{ student_form.city }}
                                     {% if student_form.city.errors %}
                                     <div class="text-danger small">{{ student_form.city.errors.0 }}</div>
@@ -160,49 +165,53 @@
                             </div>
 
                             <div class="mb-3">
-                                <label class="form-label">Address *</label>
+                                <label class="form-label">Address</label>
                                 {{ student_form.address }}
                                 {% if student_form.address.errors %}
                                 <div class="text-danger small">{{ student_form.address.errors.0 }}</div>
                                 {% endif %}
                             </div>
 
-                            <div class="mb-3">
-                                <label class="form-label">Emergency Contact *</label>
-                                {{ student_form.emergency_contact }}
-                                {% if student_form.emergency_contact.errors %}
-                                <div class="text-danger small">{{ student_form.emergency_contact.errors.0 }}</div>
-                                {% endif %}
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">Education Level</label>
+                                    {{ student_form.education_level }}
+                                    {% if student_form.education_level.errors %}
+                                    <div class="text-danger small">{{ student_form.education_level.errors.0 }}</div>
+                                    {% endif %}
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">About Me</label>
+                                    {{ student_form.about_me }}
+                                    {% if student_form.about_me.errors %}
+                                    <div class="text-danger small">{{ student_form.about_me.errors.0 }}</div>
+                                    {% endif %}
+                                </div>
                             </div>
 
                             <div class="row">
                                 <div class="col-md-6 mb-3">
-                                    <label class="form-label">Education Level</label>
-                                    {{ student_form.education }}
-                                    {% if student_form.education.errors %}
-                                    <div class="text-danger small">{{ student_form.education.errors.0 }}</div>
+                                    <label class="form-label">Preferred Language</label>
+                                    {{ student_form.preferred_language }}
+                                    {% if student_form.preferred_language.errors %}
+                                    <div class="text-danger small">{{ student_form.preferred_language.errors.0 }}</div>
                                     {% endif %}
                                 </div>
                                 <div class="col-md-6 mb-3">
-                                    <label class="form-label">Preferred Language</label>
-                                    {{ student_form.preferred_language }}
+                                    <label class="form-label">Timezone</label>
+                                    {{ student_form.timezone }}
+                                    {% if student_form.timezone.errors %}
+                                    <div class="text-danger small">{{ student_form.timezone.errors.0 }}</div>
+                                    {% endif %}
                                 </div>
                             </div>
 
-                            <div class="mb-3">
-                                <label class="form-label">Previous Islamic Studies</label>
-                                {{ student_form.previous_islamic_studies }}
-                            </div>
-
-                            {% if not student %}
-                            <div class="mb-3">
-                                <div class="form-check">
-                                    {{ student_form.terms_accepted }}
-                                    <label class="form-check-label" for="{{ student_form.terms_accepted.id_for_label }}">
-                                        I accept the terms and conditions
-                                    </label>
-                                    {% if student_form.terms_accepted.errors %}
-                                    <div class="text-danger small">{{ student_form.terms_accepted.errors.0 }}</div>
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">Cover Photo</label>
+                                    {{ student_form.cover_photo }}
+                                    {% if student_form.cover_photo.errors %}
+                                    <div class="text-danger small">{{ student_form.cover_photo.errors.0 }}</div>
                                     {% endif %}
                                 </div>
                             </div>
@@ -300,49 +309,9 @@
         </div>
     </div>
 </div>
+{% endblock %}
 
-<style>
-.list-group-item.active {
-    background-color: #0d6efd;
-    border-color: #0d6efd;
-    color: white;
-}
-
-.form-control, .form-select {
-    border-radius: 6px;
-    padding: 0.5rem 0.75rem;
-}
-
-textarea {
-    min-height: 80px;
-    resize: vertical;
-}
-
-.section {
-    transition: opacity 0.3s;
-}
-
-.text-danger.small {
-    font-size: 0.875rem;
-    margin-top: 0.25rem;
-}
-
-.card {
-    border: 1px solid #dee2e6;
-    border-radius: 8px;
-}
-
-.card-header {
-    background-color: #f8f9fa;
-    border-bottom: 1px solid #dee2e6;
-    padding: 1rem 1.25rem;
-}
-
-.card-body {
-    padding: 1.5rem;
-}
-</style>
-
+{% block extra_js %}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     // Tab navigation

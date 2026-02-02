@@ -126,6 +126,33 @@ class StudentUpdateForm(forms.ModelForm):
             'cover_photo': forms.FileInput(attrs={'class': 'form-control'}),
         }
     
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Set initial values
+        self.fields['timezone'].initial = 'Asia/Dhaka'
+        self.fields['preferred_language'].initial = 'en'
+        self.fields['country'].initial = 'Bangladesh'
+        
+        # Make fields required/optional
+        self.fields['full_name'].required = True
+        self.fields['phone'].required = True
+        
+        # These fields have defaults, so they're not required
+        self.fields['timezone'].required = False
+        self.fields['preferred_language'].required = False
+        self.fields['country'].required = False
+    
+    def clean(self):
+        cleaned_data = super().clean()
+        # Ensure defaults are set if fields are empty
+        if not cleaned_data.get('timezone'):
+            cleaned_data['timezone'] = 'Asia/Dhaka'
+        if not cleaned_data.get('preferred_language'):
+            cleaned_data['preferred_language'] = 'en'
+        if not cleaned_data.get('country'):
+            cleaned_data['country'] = 'Bangladesh'
+        return cleaned_data
+    
     def clean_date_of_birth(self):
         dob = self.cleaned_data.get('date_of_birth')
         if dob:
@@ -134,6 +161,8 @@ class StudentUpdateForm(forms.ModelForm):
             if age < 10:
                 raise forms.ValidationError("You must be at least 10 years old.")
         return dob
+
+
 
 class EnrollmentForm(forms.ModelForm):
     agree_to_terms = forms.BooleanField(
@@ -704,3 +733,6 @@ class OfficeForm(forms.ModelForm):
             'is_active': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
             'opening_hours': forms.TextInput(attrs={'class': 'form-control'}),
         }
+
+
+        

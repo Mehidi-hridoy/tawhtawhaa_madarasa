@@ -29,3 +29,10 @@ def div(value, arg):
     except (ValueError, ZeroDivisionError, TypeError):
         return 0
 
+
+@register.filter
+def split_lines(value):
+    """Split text into lines"""
+    if value:
+        return value.split('\n')
+    return []

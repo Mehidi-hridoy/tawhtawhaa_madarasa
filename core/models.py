@@ -269,7 +269,7 @@ class Student(models.Model):
     full_name = models.CharField(max_length=200)
     date_of_birth = models.DateField(null=True, blank=True)
     gender = models.CharField(max_length=20, choices=GENDER_CHOICES, blank=True)
-    phone = models.CharField(max_length=20, blank=True)
+    phone = models.CharField(max_length=20, blank=True,)
     
     # Address
     address = models.TextField(blank=True)
@@ -277,12 +277,12 @@ class Student(models.Model):
     country = models.CharField(max_length=100, default='Bangladesh')
     
     # Background
-    occupation = models.CharField(max_length=50, choices=OCCUPATION_CHOICES, blank=True)
+    occupation = models.CharField(max_length=50, choices=OCCUPATION_CHOICES, blank=True, )
     education_level = models.CharField(max_length=100, blank=True)
     about_me = models.TextField(blank=True)
     
     # Preferences
-    preferred_language = models.CharField(max_length=50, default='en')
+    preferred_language = models.CharField(max_length=50, blank=True, default='en')
     timezone = models.CharField(max_length=50, default='Asia/Dhaka')
     
     # Profile

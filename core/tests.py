@@ -12,7 +12,7 @@ python manage.py runserver
 git init
 
 git add .
-git commit -m "Updated the model and demo data "
+git commit -m "Updated the model "
 git push -u origin main
 python manage.py runserver
 

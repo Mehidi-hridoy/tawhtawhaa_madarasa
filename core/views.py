@@ -23,80 +23,30 @@ from django.contrib.auth.forms import PasswordChangeForm
 import random
 import string
 
-# ==================== AUTHENTICATION VIEWS ====================
-def register(request):
-    """User registration view"""
-    if request.method == 'POST':
-        form = UserRegistrationForm(request.POST)
-        if form.is_valid():
-            user = form.save()
-            
-            # Create student profile
-            student = Student.objects.create(
-                user=user,
-                full_name=f"{form.cleaned_data['first_name']} {form.cleaned_data['last_name']}",
-                email=user.email,
-                phone=form.cleaned_data.get('phone', '')
-            )
-            
-            # Log the user in
-            login(request, user)
-            messages.success(request, 'Registration successful! Welcome to our platform.')
-            return redirect('core:dashboard')
-    else:
-        form = UserRegistrationForm()
-    
-    return render(request, 'auth/register.html', {'form': form, 'title': 'Register'})
 
-def user_login(request):
-    """User login view"""
-    if request.method == 'POST':
-        username = request.POST.get('username')
-        password = request.POST.get('password')
-        user = authenticate(request, username=username, password=password)
-        
-        if user is not None:
-            login(request, user)
-            messages.success(request, f'Welcome back, {user.username}!')
-            
-            # Redirect based on user type
-            if hasattr(user, 'instructor_profile'):
-                return redirect('instructor:dashboard')
-            elif hasattr(user, 'student_profile'):
-                return redirect('core:dashboard')
-            else:
-                return redirect('core:home')
-        else:
-            messages.error(request, 'Invalid username or password.')
-    
-    return render(request, 'auth/login.html', {'title': 'Login'})
-
-def user_logout(request):
-    """User logout view"""
-    logout(request)
-    messages.success(request, 'You have been logged out successfully.')
-    return redirect('core:home')
-
-# ==================== HOME & PUBLIC PAGES ====================
 def home(request):
     """Home page with featured content"""
+    # Featured courses (8 courses)
     featured_courses = Course.objects.filter(
         is_active=True, 
         is_featured=True,
         is_approved=True
     ).order_by('-created_at')[:8]
     
+    # New courses (6 courses)
     new_courses = Course.objects.filter(
         is_active=True,
         is_approved=True
     ).order_by('-created_at')[:6]
     
+    # Free courses (6 courses)
     free_courses = Course.objects.filter(
         is_active=True,
         is_approved=True,
         price_type='free'
     ).order_by('-created_at')[:6]
     
+    # Top categories with course count
     categories = Category.objects.filter(
         is_active=True,
         parent__isnull=True
@@ -104,6 +54,7 @@ def home(request):
         course_count=Count('courses', filter=Q(courses__is_active=True, courses__is_approved=True))
     ).order_by('-course_count')[:8]
     
+    # Top instructors with course count
     top_instructors = Instructor.objects.filter(
         is_active=True,
         is_verified=True
@@ -111,10 +62,23 @@ def home(request):
         course_count=Count('instructor_courses', filter=Q(instructor_courses__course__is_active=True))
     ).order_by('-course_count')[:6]
     
+    # Latest testimonials/reviews
     testimonials = CourseReview.objects.filter(
-        rating=5,
         is_published=True
-    ).select_related('student', 'course')[:4]
+    ).select_related('student', 'course').order_by('-created_at')[:3]
+    
+    # Latest blog posts
+    recent_posts = BlogPost.objects.filter(
+        is_published=True
+    ).order_by('-published_at')[:3]
+    
+    # Statistics for the hero section
+    stats = {
+        'total_students': Student.objects.filter(is_active=True).count(),
+        'active_courses': Course.objects.filter(is_active=True, is_approved=True).count(),
+        'successful_completions': Certificate.objects.filter(is_verified=True).count(),
+        'total_enrollments': Enrollment.objects.filter(enrollment_status='active').count(),
+    }
     
     context = {
         'featured_courses': featured_courses,
@@ -123,10 +87,13 @@ def home(request):
         'categories': categories,
         'top_instructors': top_instructors,
         'testimonials': testimonials,
-        'title': 'Online Learning Platform - Learn Anything, Anytime'
+        'recent_posts': recent_posts,
+        'stats': stats,
+        'title': 'Taw Haa Zin Nurain - Online Islamic Madrassa'
     }
     return render(request, 'core/home.html', context)
 
+    
 def about(request):
     """About page"""
     instructors_count = Instructor.objects.filter(is_active=True).count()
@@ -271,12 +238,25 @@ def courses(request):
     }
     return render(request, 'courses/browse.html', context)
 
+
+
 def course_detail(request, course_slug):
     """Course detail page"""
-    course = get_object_or_404(Course, slug=course_slug, is_active=True, is_approved=True)
+    course = get_object_or_404(
+        Course.objects.select_related('category').prefetch_related(
+            'modules',
+            'modules__lessons',
+            'course_instructors',
+            'course_instructors__instructor',
+            'reviews',
+            'reviews__student'
+        ),
+        slug=course_slug,
+        is_active=True,
+        is_approved=True
+    )
     
     # Check if user is enrolled
-    is_enrolled = False
     enrollment = None
     if request.user.is_authenticated and hasattr(request.user, 'student_profile'):
         enrollment = Enrollment.objects.filter(
@@ -284,49 +264,32 @@ def course_detail(request, course_slug):
             course=course,
             enrollment_status__in=['active', 'completed']
         ).first()
-        is_enrolled = enrollment is not None
     
-    # Get course content preview
-    modules = course.modules.filter(is_published=True).order_by('order')[:5]
+    # Check if user has reviewed this course
+    user_review = None
+    if request.user.is_authenticated and hasattr(request.user, 'student_profile'):
+        user_review = CourseReview.objects.filter(
+            student=request.user.student_profile,
+            course=course
+        ).first()
     
-    # Get instructor details
-    instructors = course.course_instructors.select_related('instructor').filter(
-        instructor__is_active=True
-    ).order_by('display_order')
-    
-    # Get reviews
-    reviews = CourseReview.objects.filter(
-        course=course,
-        is_published=True
-    ).order_by('-created_at')[:5]
-    
-    # Related courses
+    # Get related courses (same category)
     related_courses = Course.objects.filter(
         category=course.category,
         is_active=True,
         is_approved=True
-    ).exclude(id=course.id)[:4]
-    
-    # Check if in wishlist
-    in_wishlist = False
-    if request.user.is_authenticated and hasattr(request.user, 'student_profile'):
-        in_wishlist = Wishlist.objects.filter(
-            student=request.user.student_profile,
-            course=course
-        ).exists()
+    ).exclude(id=course.id).order_by('-created_at')[:4]
     
     context = {
         'course': course,
-        'modules': modules,
-        'instructors': instructors,
-        'reviews': reviews,
-        'related_courses': related_courses,
-        'is_enrolled': is_enrolled,
         'enrollment': enrollment,
-        'in_wishlist': in_wishlist,
-        'title': f'{course.name} - Online Course'
+        'user_review': user_review,
+        'related_courses': related_courses,
+        'title': f'{course.name} - Taw Haa Zin Nurain'
     }
+    
     return render(request, 'courses/detail.html', context)
+
 
 @login_required
 def enroll_course(request, course_slug):
@@ -1217,33 +1180,87 @@ def certificates(request):
     }
     return render(request, 'dashboard/certificates.html', context)
 
+
 @login_required
 def profile_settings(request):
     """User profile settings"""
     student = getattr(request.user, 'student_profile', None)
     
     if request.method == 'POST':
-        user_form = UserUpdateForm(request.POST, instance=request.user)
-        student_form = StudentUpdateForm(request.POST, request.FILES, instance=student) if student else None
+        print("POST data:", request.POST)  # Debug
+        print("FILES:", request.FILES)  # Debug
         
-        if user_form.is_valid() and (student_form is None or student_form.is_valid()):
-            user_form.save()
+        # Determine which form was submitted
+        if 'update_profile' in request.POST:
+            user_form = UserUpdateForm(request.POST, instance=request.user)
             
+            if student:
+                student_form = StudentUpdateForm(request.POST, request.FILES, instance=student)
+                print("Using existing student form")  # Debug
+            else:
+                student_form = None
+                print("No student form (student doesn't exist)")  # Debug
+            
+            print("User form valid:", user_form.is_valid())  # Debug
             if student_form:
-                student_form.save()
-            elif not student and 'phone' in request.POST:
-                # Create student profile if doesn't exist
-                Student.objects.create(
-                    user=request.user,
-                    full_name=f"{request.user.first_name} {request.user.last_name}",
-                    phone=request.POST.get('phone'),
-                    email=request.user.email
-                )
+                print("Student form valid:", student_form.is_valid())  # Debug
+                if student_form.errors:
+                    print("Student form errors:", student_form.errors)  # Debug
             
-            messages.success(request, 'Profile updated successfully!')
-            return redirect('core:profile_settings')
-        else:
-            messages.error(request, 'Please correct the errors below.')
+            if user_form.is_valid() and (student_form is None or student_form.is_valid()):
+                user_form.save()
+                print("User form saved")  # Debug
+                
+                if student_form:
+                    student_instance = student_form.save(commit=False)
+                    student_instance.user = request.user
+                    student_instance.save()
+                    print("Student form saved")  # Debug
+                elif not student:
+                    # Create student profile if doesn't exist
+                    Student.objects.create(
+                        user=request.user,
+                        full_name=f"{request.user.first_name} {request.user.last_name}",
+                        phone=request.POST.get('phone', ''),  # Phone might be empty
+                        country='Bangladesh',
+                        preferred_language='en',
+                        timezone='Asia/Dhaka'
+                    )
+                    print("Created new student profile")  # Debug
+                
+                messages.success(request, 'Profile updated successfully!')
+                return redirect('core:profile_settings')
+            
+            else:
+                # Show form errors
+                if user_form.errors:
+                    for field, errors in user_form.errors.items():
+                        for error in errors:
+                            messages.error(request, f"{field}: {error}")
+                if student_form and student_form.errors:
+                    for field, errors in student_form.errors.items():
+                        for error in errors:
+                            messages.error(request, f"{field}: {error}")
+        
+        elif 'change_password' in request.POST:
+            # Handle password change
+            old_password = request.POST.get('old_password')
+            new_password1 = request.POST.get('new_password1')
+            new_password2 = request.POST.get('new_password2')
+            
+            if not request.user.check_password(old_password):
+                messages.error(request, 'Current password is incorrect.')
+            elif new_password1 != new_password2:
+                messages.error(request, 'New passwords do not match.')
+            elif len(new_password1) < 8:
+                messages.error(request, 'Password must be at least 8 characters.')
+            else:
+                request.user.set_password(new_password1)
+                request.user.save()
+                update_session_auth_hash(request, request.user)
+                messages.success(request, 'Password changed successfully!')
+                return redirect('core:profile_settings')
+    
     else:
         user_form = UserUpdateForm(instance=request.user)
         student_form = StudentUpdateForm(instance=student) if student else None
@@ -1255,6 +1272,7 @@ def profile_settings(request):
         'title': 'Profile Settings'
     }
     return render(request, 'dashboard/profile_settings.html', context)
+
 
 # ==================== TEAM VIEWS ====================
 def team(request):
