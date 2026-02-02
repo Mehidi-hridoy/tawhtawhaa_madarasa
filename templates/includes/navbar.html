@@ -1,0 +1,498 @@
+<!-- Navigation Bar -->
+<nav class="navbar navbar-expand-lg navbar-transparent fixed-top" id="mainNavbar">
+    <div class="container">
+        <!-- Logo -->
+        <a class="navbar-brand" href="{% url 'core:home' %}">
+            <div class="d-flex align-items-center">
+                <div class="logo-icon me-2">
+                    <i class="fas fa-graduation-cap"></i>
+                </div>
+                <div class="logo-text">
+                    <span class="fw-bold text-white">Taw Haa</span>
+                    <span class="fw-bold text-primary">ZinNurain</span>
+                    <small class="d-block text-muted" style="font-size: 0.75rem;">Online Madarasa</small>
+                </div>
+            </div>
+        </a>
+
+        <!-- Mobile Toggle Button -->
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+
+        <!-- Main Navigation -->
+        <div class="collapse navbar-collapse" id="navbarNav">
+            <ul class="navbar-nav mx-auto">
+                <!-- Home -->
+                <li class="nav-item">
+                    <a class="nav-link {% if request.resolver_match.url_name == 'home' %}active{% endif %}" 
+                       href="{% url 'core:home' %}">
+                        <i class="fas fa-home me-1 d-lg-none"></i> Home
+                    </a>
+                </li>
+
+                <!-- Courses Mega Dropdown -->
+                <li class="nav-item dropdown mega-dropdown">
+                    <a class="nav-link dropdown-toggle {% if 'courses' in request.resolver_match.url_name or 'course' in request.path %}active{% endif %}" 
+                       href="#" id="coursesDropdown" role="button" 
+                       data-bs-toggle="dropdown" aria-expanded="false">
+                        <i class="fas fa-book me-1 d-lg-none"></i> Courses
+                    </a>
+                    <div class="dropdown-menu mega-menu p-4" aria-labelledby="coursesDropdown">
+                        <div class="container">
+                            <div class="row">
+                                <!-- Quran Studies -->
+                                <div class="col-lg-3 mb-3 mb-lg-0">
+                                    <div class="category-group">
+                                        <h6 class="text-primary mb-3 border-bottom pb-2">
+                                            <i class="fas fa-quran me-2"></i> Quran Studies
+                                        </h6>
+                                        <div class="d-grid gap-2">
+                                            <a href="{% url 'core:courses' %}?category=quran" class="dropdown-item p-2 rounded">
+                                                <div class="d-flex align-items-center">
+                                                    <div class="icon-sm bg-primary bg-opacity-10 text-primary rounded-circle me-3">
+                                                        <i class="fas fa-microphone"></i>
+                                                    </div>
+                                                    <div>
+                                                        <div class="fw-medium">Quran Recitation</div>
+                                                        <small class="text-muted">With Tajweed rules</small>
+                                                    </div>
+                                                </div>
+                                            </a>
+                                            <a href="{% url 'core:courses' %}?category=memorization" class="dropdown-item p-2 rounded">
+                                                <div class="d-flex align-items-center">
+                                                    <div class="icon-sm bg-success bg-opacity-10 text-success rounded-circle me-3">
+                                                        <i class="fas fa-brain"></i>
+                                                    </div>
+                                                    <div>
+                                                        <div class="fw-medium">Hifz Program</div>
+                                                        <small class="text-muted">Quran Memorization</small>
+                                                    </div>
+                                                </div>
+                                            </a>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Tadabbur & Tafsir -->
+                                <div class="col-lg-3 mb-3 mb-lg-0">
+                                    <div class="category-group">
+                                        <h6 class="text-success mb-3 border-bottom pb-2">
+                                            <i class="fas fa-book-open me-2"></i> Tadabbur & Tafsir
+                                        </h6>
+                                        <div class="d-grid gap-2">
+                                            <a href="{% url 'core:courses' %}?category=tadabbur" class="dropdown-item p-2 rounded">
+                                                <div class="d-flex align-items-center">
+                                                    <div class="icon-sm bg-success bg-opacity-10 text-success rounded-circle me-3">
+                                                        <i class="fas fa-lightbulb"></i>
+                                                    </div>
+                                                    <div>
+                                                        <div class="fw-medium">Tadabbur Quran</div>
+                                                        <small class="text-muted">Deep reflection</small>
+                                                    </div>
+                                                </div>
+                                            </a>
+                                            <a href="{% url 'core:courses' %}?category=tafsir" class="dropdown-item p-2 rounded">
+                                                <div class="d-flex align-items-center">
+                                                    <div class="icon-sm bg-warning bg-opacity-10 text-warning rounded-circle me-3">
+                                                        <i class="fas fa-book-reader"></i>
+                                                    </div>
+                                                    <div>
+                                                        <div class="fw-medium">Quran Tafsir</div>
+                                                        <small class="text-muted">Detailed explanation</small>
+                                                    </div>
+                                                </div>
+                                            </a>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Seerah & Sunnah -->
+                                <div class="col-lg-3 mb-3 mb-lg-0">
+                                    <div class="category-group">
+                                        <h6 class="text-warning mb-3 border-bottom pb-2">
+                                            <i class="fas fa-mosque me-2"></i> Seerah & Sunnah
+                                        </h6>
+                                        <div class="d-grid gap-2">
+                                            <a href="{% url 'core:courses' %}?category=seerah" class="dropdown-item p-2 rounded">
+                                                <div class="d-flex align-items-center">
+                                                    <div class="icon-sm bg-warning bg-opacity-10 text-warning rounded-circle me-3">
+                                                        <i class="fas fa-user"></i>
+                                                    </div>
+                                                    <div>
+                                                        <div class="fw-medium">Riratunnabi (SM)</div>
+                                                        <small class="text-muted">Prophet's life</small>
+                                                    </div>
+                                                </div>
+                                            </a>
+                                            <a href="{% url 'core:courses' %}?category=hadith" class="dropdown-item p-2 rounded">
+                                                <div class="d-flex align-items-center">
+                                                    <div class="icon-sm bg-info bg-opacity-10 text-info rounded-circle me-3">
+                                                        <i class="fas fa-quote-right"></i>
+                                                    </div>
+                                                    <div>
+                                                        <div class="fw-medium">Hadith Studies</div>
+                                                        <small class="text-muted">Prophet's traditions</small>
+                                                    </div>
+                                                </div>
+                                            </a>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Islamic Sciences -->
+                                <div class="col-lg-3">
+                                    <div class="category-group">
+                                        <h6 class="text-info mb-3 border-bottom pb-2">
+                                            <i class="fas fa-graduation-cap me-2"></i> Islamic Sciences
+                                        </h6>
+                                        <div class="d-grid gap-2">
+                                            <a href="{% url 'core:courses' %}?category=aqida" class="dropdown-item p-2 rounded">
+                                                <div class="d-flex align-items-center">
+                                                    <div class="icon-sm bg-info bg-opacity-10 text-info rounded-circle me-3">
+                                                        <i class="fas fa-brain"></i>
+                                                    </div>
+                                                    <div>
+                                                        <div class="fw-medium">Aqida Learning</div>
+                                                        <small class="text-muted">Islamic creed</small>
+                                                    </div>
+                                                </div>
+                                            </a>
+                                            <a href="{% url 'core:courses' %}?category=fiqh" class="dropdown-item p-2 rounded">
+                                                <div class="d-flex align-items-center">
+                                                    <div class="icon-sm bg-danger bg-opacity-10 text-danger rounded-circle me-3">
+                                                        <i class="fas fa-balance-scale"></i>
+                                                    </div>
+                                                    <div>
+                                                        <div class="fw-medium">Fiqh Studies</div>
+                                                        <small class="text-muted">Islamic jurisprudence</small>
+                                                    </div>
+                                                </div>
+                                            </a>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Quick Actions Row -->
+                            <div class="row mt-4 pt-3 border-top">
+                                <div class="col-md-8 d-flex flex-wrap gap-2 align-items-center">
+                                    <a href="{% url 'core:courses' %}" class="btn btn-outline-primary btn-sm">
+                                        <i class="fas fa-book me-1"></i> All Courses
+                                    </a>
+                                    {% if user.is_authenticated %}
+                                    <a href="{% url 'core:my_courses' %}" class="btn btn-primary btn-sm">
+                                        <i class="fas fa-book-open me-1"></i> Continue Learning
+                                    </a>
+                                    <a href="{% url 'core:wishlist' %}" class="btn btn-outline-success btn-sm">
+                                        <i class="fas fa-heart me-1"></i> My Wishlist
+                                        {% if wishlist_count %}
+                                        <span class="badge bg-danger ms-1">{{ wishlist_count }}</span>
+                                        {% endif %}
+                                    </a>
+                                    {% endif %}
+                                    <a href="{% url 'core:checkout' %}" class="btn btn-outline-warning btn-sm">
+                                        <i class="fas fa-shopping-cart me-1"></i> Checkout
+                                    </a>
+                                </div>
+                                <div class="col-md-4 text-md-end">
+                                    <small class="text-muted">
+                                        <i class="fas fa-clock me-1"></i> 
+                                        New batches starting soon
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </li>
+
+                <!-- Learning Hub (Authenticated Users) -->
+                {% if user.is_authenticated %}
+                <li class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle {% if 'dashboard' in request.path or 'learning' in request.path or 'my_' in request.resolver_match.url_name %}active{% endif %}" 
+                       href="#" id="learningHubDropdown" role="button" 
+                       data-bs-toggle="dropdown" aria-expanded="false">
+                        <i class="fas fa-graduation-cap me-1 d-lg-none"></i> 
+                        <span class="d-none d-lg-inline">My Learning</span>
+                        <span class="d-lg-none">Learning Hub</span>
+                    </a>
+                    <div class="dropdown-menu dropdown-menu-lg" aria-labelledby="learningHubDropdown">
+                        <div class="row g-0">
+                            <!-- Quick Stats Column -->
+                            <div class="col-lg-4 bg-light p-3 rounded-start">
+                                <h6 class="fw-bold mb-3 text-primary">
+                                    <i class="fas fa-chart-line me-2"></i> Progress Overview
+                                </h6>
+                                <div class="small mb-3">
+                                    <div class="d-flex justify-content-between mb-2">
+                                        <span>Courses Enrolled</span>
+                                        <span class="fw-bold">{{ enrolled_courses_count|default:0 }}</span>
+                                    </div>
+                                    <div class="d-flex justify-content-between mb-2">
+                                        <span>Completed Lessons</span>
+                                        <span class="fw-bold">{{ completed_lessons|default:0 }}</span>
+                                    </div>
+                                    <div class="d-flex justify-content-between mb-3">
+                                        <span>Certificates</span>
+                                        <span class="fw-bold">{{ certificates_count|default:0 }}</span>
+                                    </div>
+                                </div>
+                                <a href="{% url 'core:dashboard' %}" class="btn btn-primary btn-sm w-100">
+                                    <i class="fas fa-tachometer-alt me-1"></i> View Dashboard
+                                </a>
+                            </div>
+
+                            <!-- Learning Links Column -->
+                            <div class="col-lg-8 p-3">
+                                <div class="row g-2">
+                                    <div class="col-md-6">
+                                        <h6 class="fw-bold mb-2 text-success">
+                                            <i class="fas fa-book me-1"></i> Courses
+                                        </h6>
+                                        <div class="d-grid gap-1">
+                                            <a href="{% url 'core:my_courses' %}" class="dropdown-item py-2">
+                                                <i class="fas fa-book-open me-2"></i> My Courses
+                                            </a>
+                                            <a href="{% url 'core:my_progress' %}" class="dropdown-item py-2">
+                                                <i class="fas fa-chart-bar me-2"></i> My Progress
+                                            </a>
+                                            <a href="{% url 'core:wishlist' %}" class="dropdown-item py-2">
+                                                <i class="fas fa-heart me-2"></i> My Wishlist
+                                                {% if wishlist_count %}
+                                                <span class="badge bg-danger float-end">{{ wishlist_count }}</span>
+                                                {% endif %}
+                                            </a>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <h6 class="fw-bold mb-2 text-warning">
+                                            <i class="fas fa-award me-1"></i> Achievements
+                                        </h6>
+                                        <div class="d-grid gap-1">
+                                            <a href="{% url 'core:certificates' %}" class="dropdown-item py-2">
+                                                <i class="fas fa-certificate me-2"></i> My Certificates
+                                            </a>
+                                            <a href="{% url 'core:payment_history' %}" class="dropdown-item py-2">
+                                                <i class="fas fa-receipt me-2"></i> Payment History
+                                            </a>
+                                            <a href="#" class="dropdown-item py-2" data-bs-toggle="modal" data-bs-target="#quizHistoryModal">
+                                                <i class="fas fa-clipboard-check me-2"></i> Quiz Results
+                                            </a>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </li>
+                {% endif %}
+
+                <!-- Resources -->
+                <li class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle {% if 'team' in request.path or 'blog' in request.path or 'gallery' in request.path or 'faq' in request.path or 'about' in request.path %}active{% endif %}" 
+                       href="#" id="resourcesDropdown" role="button" 
+                       data-bs-toggle="dropdown" aria-expanded="false">
+                        <i class="fas fa-cube me-1 d-lg-none"></i> Resources
+                    </a>
+                    <div class="dropdown-menu" aria-labelledby="resourcesDropdown">
+                        <h6 class="dropdown-header text-primary">
+                            <i class="fas fa-info-circle me-2"></i> About & Info
+                        </h6>
+                        <a class="dropdown-item" href="{% url 'core:about' %}">
+                            <i class="fas fa-info-circle me-2"></i> About Us
+                        </a>
+                        <a class="dropdown-item" href="{% url 'core:team' %}">
+                            <i class="fas fa-chalkboard-teacher me-2"></i> Our Instructors
+                        </a>
+                        <a class="dropdown-item" href="{% url 'core:faq' %}">
+                            <i class="fas fa-question-circle me-2"></i> FAQ
+                        </a>
+                        
+                        <div class="dropdown-divider"></div>
+                        
+                        <h6 class="dropdown-header text-success">
+                            <i class="fas fa-newspaper me-2"></i> Content
+                        </h6>
+                        <a class="dropdown-item" href="{% url 'core:blog' %}">
+                            <i class="fas fa-blog me-2"></i> Islamic Blog
+                        </a>
+                        <a class="dropdown-item" href="{% url 'core:gallery' %}">
+                            <i class="fas fa-images me-2"></i> Gallery
+                        </a>
+                        
+                        <div class="dropdown-divider"></div>
+                        
+                        <h6 class="dropdown-header text-warning">
+                            <i class="fas fa-hand-holding-heart me-2"></i> Support
+                        </h6>
+                        <a class="dropdown-item" href="{% url 'core:donate' %}">
+                            <i class="fas fa-donate me-2"></i> Donate & Support
+                        </a>
+                        <a class="dropdown-item" href="{% url 'core:contact' %}">
+                            <i class="fas fa-headset me-2"></i> Contact Support
+                        </a>
+                    </div>
+                </li>
+
+                <!-- Contact -->
+                <li class="nav-item">
+                    <a class="nav-link {% if request.resolver_match.url_name == 'contact' %}active{% endif %}" 
+                       href="{% url 'core:contact' %}">
+                        <i class="fas fa-phone me-1 d-lg-none"></i> Contact
+                    </a>
+                </li>
+
+                <!-- Search Mobile -->
+                <li class="nav-item d-lg-none mt-2">
+                    <a class="nav-link" href="{% url 'core:search' %}">
+                        <i class="fas fa-search me-2"></i> Search Courses
+                    </a>
+                </li>
+            </ul>
+
+            <!-- Right Side Actions -->
+            <div class="navbar-nav align-items-lg-center">
+                <!-- Search Button (Desktop) -->
+                <div class="nav-item d-none d-lg-block me-3">
+                    <a href="{% url 'core:search' %}" class="nav-link position-relative">
+                        <i class="fas fa-search"></i>
+                    </a>
+                </div>
+
+                <!-- Wishlist Icon (Authenticated Only - Desktop) -->
+                {% if user.is_authenticated %}
+                <div class="nav-item d-none d-lg-block me-3">
+                    <a href="{% url 'core:wishlist' %}" class="nav-link position-relative" 
+                       data-bs-toggle="tooltip" title="My Wishlist">
+                        <i class="fas fa-heart"></i>
+                        {% if wishlist_count %}
+                        <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" 
+                              style="font-size: 0.6rem; padding: 2px 5px;">
+                            {{ wishlist_count }}
+                        </span>
+                        {% endif %}
+                    </a>
+                </div>
+                {% endif %}
+
+                <!-- Cart/Checkout Icon -->
+                <div class="nav-item d-none d-lg-block me-3">
+                    <a href="{% url 'core:checkout' %}" class="nav-link position-relative" 
+                       data-bs-toggle="tooltip" title="Checkout">
+                        <i class="fas fa-shopping-cart"></i>
+                    </a>
+                </div>
+
+                <!-- Auth Buttons / User Dropdown -->
+                {% if user.is_authenticated %}
+                    <div class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle d-flex align-items-center" href="#" 
+                           id="userDropdown" role="button" data-bs-toggle="dropdown">
+                            <div class="user-avatar me-2 position-relative">
+                                {% if user.student_profile.profile_picture %}
+                                    <img src="{{ user.student_profile.profile_picture.url }}" 
+                                         alt="{{ user.get_full_name }}" 
+                                         class="rounded-circle border border-2 border-primary"
+                                         style="width: 36px; height: 36px;">
+                                {% else %}
+                                    <div class="avatar-placeholder rounded-circle border border-2 border-primary d-flex align-items-center justify-content-center"
+                                         style="width: 36px; height: 36px; background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));">
+                                        <span class="text-white fw-bold">{{ user.first_name|first|upper }}</span>
+                                    </div>
+                                {% endif %}
+                                <span class="position-absolute bottom-0 end-0 translate-middle p-1 bg-success border border-2 border-white rounded-circle">
+                                    <span class="visually-hidden">Online</span>
+                                </span>
+                            </div>
+                            <span class="d-none d-lg-inline fw-medium">{{ user.first_name }}</span>
+                        </a>
+                        <div class="dropdown-menu dropdown-menu-end p-3" style="min-width: 280px;" aria-labelledby="userDropdown">
+                            <!-- User Info -->
+                            <div class="d-flex align-items-center mb-3">
+                                <div class="me-3">
+                                    {% if user.student_profile.profile_picture %}
+                                        <img src="{{ user.student_profile.profile_picture.url }}" 
+                                             alt="{{ user.get_full_name }}" 
+                                             class="rounded-circle" width="48" height="48">
+                                    {% else %}
+                                        <div class="rounded-circle d-flex align-items-center justify-content-center"
+                                             style="width: 48px; height: 48px; background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));">
+                                            <span class="text-white fw-bold fs-5">{{ user.first_name|first|upper }}</span>
+                                        </div>
+                                    {% endif %}
+                                </div>
+                                <div>
+                                    <h6 class="mb-0 fw-bold">{{ user.get_full_name }}</h6>
+                                    <small class="text-muted">{{ user.email }}</small>
+                                    <div class="mt-1">
+                                        <span class="badge bg-success bg-opacity-10 text-success">
+                                            <i class="fas fa-circle fa-xs me-1"></i> Active Learner
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="dropdown-divider"></div>
+
+                            <!-- Quick Actions -->
+                            <div class="row g-2 mb-3">
+                                <div class="col-6">
+                                    <a href="{% url 'core:profile_settings' %}" class="btn btn-outline-primary btn-sm w-100">
+                                        <i class="fas fa-cog me-1"></i> Settings
+                                    </a>
+                                </div>
+                                <div class="col-6">
+                                    <a href="{% url 'core:my_courses' %}" class="btn btn-primary btn-sm w-100">
+                                        <i class="fas fa-play me-1"></i> Continue
+                                    </a>
+                                </div>
+                            </div>
+
+                            <!-- Quick Links -->
+                            <div class="list-group list-group-flush">
+                                <a href="{% url 'core:dashboard' %}" class="list-group-item list-group-item-action border-0 py-2">
+                                    <i class="fas fa-tachometer-alt text-primary me-2"></i> Dashboard
+                                </a>
+                                <a href="{% url 'core:wishlist' %}" class="list-group-item list-group-item-action border-0 py-2">
+                                    <i class="fas fa-heart text-danger me-2"></i> Wishlist
+                                    {% if wishlist_count %}
+                                    <span class="badge bg-danger float-end">{{ wishlist_count }}</span>
+                                    {% endif %}
+                                </a>
+                                <a href="{% url 'core:certificates' %}" class="list-group-item list-group-item-action border-0 py-2">
+                                    <i class="fas fa-award text-warning me-2"></i> Certificates
+                                </a>
+                                <a href="{% url 'core:payment_history' %}" class="list-group-item list-group-item-action border-0 py-2">
+                                    <i class="fas fa-history text-info me-2"></i> Payment History
+                                </a>
+                            </div>
+
+                            <!-- Admin Access -->
+                            {% if user.is_staff %}
+                            <div class="dropdown-divider"></div>
+                            <a href="{% url 'admin:index' %}" class="dropdown-item text-success">
+                                <i class="fas fa-cog me-2"></i> Admin Panel
+                            </a>
+                            {% endif %}
+
+                            <!-- Logout -->
+                            <div class="dropdown-divider"></div>
+                            <a href="{% url 'core:logout' %}" class="dropdown-item text-danger">
+                                <i class="fas fa-sign-out-alt me-2"></i> Logout
+                            </a>
+                        </div>
+                    </div>
+                {% else %}
+                    <div class="d-flex gap-2">
+                        <a href="{% url 'core:login' %}" class="btn btn-outline-light btn-sm px-3">
+                            <i class="fas fa-sign-in-alt me-1"></i> Login
+                        </a>
+                        <a href="{% url 'core:register' %}" class="btn btn-primary btn-sm px-3">
+                            <i class="fas fa-user-plus me-1"></i> Join Free
+                        </a>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</nav>

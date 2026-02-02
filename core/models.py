@@ -2,79 +2,188 @@ from django.db import models
 from django.contrib.auth.models import User
 from django.utils import timezone
 from django.core.validators import MinValueValidator, MaxValueValidator
+import uuid 
+from django.db.models import Q, F
+from django.utils.text import slugify
 import uuid
+import os
+from decimal import Decimal
 
-# Main Models
+# ==================== UTILITY FUNCTIONS ====================
+def course_thumbnail_path(instance, filename):
+    return f'courses/{instance.id}/thumbnail/{filename}'
+
+def course_featured_image_path(instance, filename):
+    return f'courses/{instance.id}/featured/{filename}'
+
+def lesson_video_path(instance, filename):
+    return f'courses/{instance.module.self_learning_course.course.id}/lessons/{instance.id}/{filename}'
+
+def resource_file_path(instance, filename):
+    return f'courses/{instance.course.id}/resources/{filename}'
+
+# ==================== CATEGORY MODEL ====================
+class Category(models.Model):
+    """Dynamic category model that admin can manage"""
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    name = models.CharField(max_length=100)
+    slug = models.SlugField(unique=True, blank=True)
+    description = models.TextField(blank=True)
+    icon_class = models.CharField(max_length=50, default='fas fa-book')
+    color = models.CharField(max_length=7, default='#4CAF50')  # Hex color
+    display_order = models.IntegerField(default=0)
+    is_active = models.BooleanField(default=True)
+    parent = models.ForeignKey('self', on_delete=models.CASCADE, null=True, blank=True, related_name='children')
+    
+    # SEO Fields
+    meta_title = models.CharField(max_length=200, blank=True)
+    meta_description = models.CharField(max_length=300, blank=True)
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        verbose_name_plural = "Categories"
+        ordering = ['display_order', 'name']
+    
+    def save(self, *args, **kwargs):
+        if not self.slug:
+            self.slug = slugify(self.name)
+        super().save(*args, **kwargs)
+    
+    def __str__(self):
+        return self.name
+    
+    def get_active_courses_count(self):
+        return self.courses.filter(is_active=True).count()
+
+# ==================== MAIN COURSE MODEL ====================
 class Course(models.Model):
-    COURSE_CATEGORIES = [
-        ('quran', 'Authentic Quran Recitations'),
-        ('tadabbur', 'Tadabbur Quran'),
-        ('sirah', 'Riratunnabi (SM)'),
-        ('aqida', 'Aqida Learning Courses'),
-        ('other', 'Other Islamic Studies'),
+    COURSE_TYPES = [
+        ('self_paced', 'Self-Paced'),
+        ('instructor_led', 'Instructor-Led'),
+        ('hybrid', 'Hybrid'),
     ]
     
     LEVEL_CHOICES = [
         ('beginner', 'Beginner'),
         ('intermediate', 'Intermediate'),
         ('advanced', 'Advanced'),
+        ('all', 'All Levels'),
+    ]
+    
+    PRICE_TYPES = [
+        ('free', 'Free'),
+        ('paid', 'Paid'),
+        ('subscription', 'Subscription'),
     ]
     
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     name = models.CharField(max_length=200)
-    category = models.CharField(max_length=50, choices=COURSE_CATEGORIES)
+    slug = models.SlugField(unique=True, blank=True)
+    
+    # Category (replacing old static categories)
+    category = models.ForeignKey(Category, on_delete=models.SET_NULL, null=True, related_name='courses')
+    
+    # Course Details
+    course_type = models.CharField(max_length=20, choices=COURSE_TYPES, default='self_paced')
     level = models.CharField(max_length=20, choices=LEVEL_CHOICES, default='beginner')
     description = models.TextField()
     short_description = models.CharField(max_length=300)
+    learning_outcomes = models.TextField(blank=True)
+    prerequisites = models.TextField(blank=True)
+    target_audience = models.TextField(blank=True)
     
     # Pricing
-    base_fee = models.DecimalField(max_digits=10, decimal_places=2)  # 1000-3000 BDT
-    discount_fee = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    price_type = models.CharField(max_length=20, choices=PRICE_TYPES, default='free')
+    base_price = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
+    sale_price = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    currency = models.CharField(max_length=3, default='BDT')
     
-    # Course Details
-    duration_weeks = models.IntegerField()
-    classes_per_week = models.IntegerField()
-    class_duration_minutes = models.IntegerField()
+    # Duration
+    estimated_duration_hours = models.IntegerField(default=0)
+    access_duration_days = models.IntegerField(default=365)  # Days after enrollment
     
-    # Timing Slots
-    morning_slot = models.BooleanField(default=False)
-    afternoon_slot = models.BooleanField(default=False)
-    evening_slot = models.BooleanField(default=False)
-    night_slot = models.BooleanField(default=False)
+    # Multimedia
+    thumbnail = models.ImageField(upload_to=course_thumbnail_path, null=True, blank=True)
+    featured_image = models.ImageField(upload_to=course_featured_image_path, null=True, blank=True)
+    promo_video_url = models.URLField(blank=True)
     
-    # Prerequisites
-    min_age = models.IntegerField(default=10)
-    prerequisites = models.TextField(blank=True)
-    
-    # Resources
-    materials_included = models.BooleanField(default=True)
-    additional_books = models.TextField(blank=True)
-    
-    # Status
+    # Status & Settings
     is_active = models.BooleanField(default=True)
-    max_students = models.IntegerField(default=50)
-    current_enrollment = models.IntegerField(default=0)
+    is_featured = models.BooleanField(default=False)
+    is_approved = models.BooleanField(default=False)
+    certificate_available = models.BooleanField(default=True)
+    requires_completion_certificate = models.BooleanField(default=False)
+    
+    # Statistics
+    enrollment_count = models.IntegerField(default=0)
+    average_rating = models.FloatField(default=0.0)
+    review_count = models.IntegerField(default=0)
     
     # Metadata
+    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='created_courses')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    enrollment_deadline = models.DateField()
+    published_at = models.DateTimeField(null=True, blank=True)
     
-    # Images
-    thumbnail = models.ImageField(upload_to='course_thumbnails/', null=True, blank=True)
-    featured_image = models.ImageField(upload_to='course_images/', null=True, blank=True)
+    # SEO
+    meta_title = models.CharField(max_length=200, blank=True)
+    meta_description = models.CharField(max_length=300, blank=True)
+    meta_keywords = models.CharField(max_length=500, blank=True)
     
-    def enrollment_percentage(self):
-        if self.max_students > 0:
-            return (self.current_enrollment / self.max_students) * 100
-        return 0
+    class Meta:
+        ordering = ['-created_at']
     
-    def is_available(self):
-        return self.is_active and self.current_enrollment < self.max_students
+    def save(self, *args, **kwargs):
+        if not self.slug:
+            self.slug = slugify(self.name)
+        super().save(*args, **kwargs)
     
     def __str__(self):
-        return f"{self.name} - {self.get_category_display()}"
+        return f"{self.name} ({self.get_price_type_display()})"
+    
+    def get_current_price(self):
+        """Get current price (sale price if available)"""
+        if self.sale_price and self.sale_price < self.base_price:
+            return self.sale_price
+        return self.base_price
+    
+    def is_free(self):
+        return self.price_type == 'free' or self.get_current_price() == 0
+    
+    def get_discount_percentage(self):
+        if self.sale_price and self.base_price > 0:
+            discount = ((self.base_price - self.sale_price) / self.base_price) * 100
+            return int(discount)
+        return 0
+    
+    def get_total_modules_count(self):
+        return self.modules.count()
+    
+    def get_total_lessons_count(self):
+        total = 0
+        for module in self.modules.all():
+            total += module.lessons.count()
+        return total
 
+# ==================== COURSE INSTRUCTORS ====================
+class CourseInstructor(models.Model):
+    """M2M relationship between Course and Instructor with extra data"""
+    course = models.ForeignKey(Course, on_delete=models.CASCADE, related_name='course_instructors')
+    instructor = models.ForeignKey('Instructor', on_delete=models.CASCADE, related_name='instructor_courses')
+    is_primary = models.BooleanField(default=False)
+    display_order = models.IntegerField(default=0)
+    added_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        ordering = ['display_order']
+        unique_together = ['course', 'instructor']
+    
+    def __str__(self):
+        return f"{self.instructor.full_name} - {self.course.name}"
+
+# ==================== INSTRUCTOR MODEL ====================
 class Instructor(models.Model):
     ROLES = [
         ('lead', 'Lead Instructor'),
@@ -90,11 +199,11 @@ class Instructor(models.Model):
     full_name = models.CharField(max_length=200)
     title = models.CharField(max_length=100)
     bio = models.TextField()
-    specialization = models.CharField(max_length=200)
+    specialization = models.TextField()
     
     # Professional Details
-    role = models.CharField(max_length=20, choices=ROLES)
-    experience_years = models.IntegerField()
+    role = models.CharField(max_length=20, choices=ROLES, default='assistant')
+    experience_years = models.IntegerField(default=0)
     qualifications = models.TextField()
     
     # Contact
@@ -102,43 +211,55 @@ class Instructor(models.Model):
     email = models.EmailField()
     
     # Social Media
+    website = models.URLField(blank=True)
     facebook = models.URLField(blank=True)
     twitter = models.URLField(blank=True)
     linkedin = models.URLField(blank=True)
+    youtube = models.URLField(blank=True)
     
     # Images
-    profile_picture = models.ImageField(upload_to='instructor_profiles/', null=True, blank=True)
+    profile_picture = models.ImageField(upload_to='instructors/profiles/', null=True, blank=True)
+    cover_photo = models.ImageField(upload_to='instructors/covers/', null=True, blank=True)
     
     # Status
     is_active = models.BooleanField(default=True)
+    is_verified = models.BooleanField(default=False)
     display_order = models.IntegerField(default=0)
     
-    courses = models.ManyToManyField(Course, related_name='instructors', blank=True)
+    # Statistics
+    total_courses = models.IntegerField(default=0)
+    total_students = models.IntegerField(default=0)
+    average_rating = models.FloatField(default=0.0)
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        ordering = ['display_order']
     
     def __str__(self):
         return f"{self.full_name} - {self.get_role_display()}"
+    
+    def get_active_courses(self):
+        return self.course_instructors.filter(course__is_active=True)
 
+# ==================== STUDENT MODEL ====================
 class Student(models.Model):
     GENDER_CHOICES = [
         ('male', 'Male'),
         ('female', 'Female'),
+        ('other', 'Other'),
+        ('prefer_not_to_say', 'Prefer not to say'),
     ]
     
     OCCUPATION_CHOICES = [
         ('student', 'Student'),
-        ('professional', 'Professional'),
-        ('housewife', 'Housewife'),
-        ('business', 'Business'),
+        ('professional', 'Working Professional'),
+        ('business', 'Business Owner'),
+        ('housewife', 'Homemaker'),
+        ('unemployed', 'Unemployed'),
+        ('retired', 'Retired'),
         ('other', 'Other'),
-    ]
-    
-    EDUCATION_CHOICES = [
-        ('school', 'School Student'),
-        ('college', 'College Student'),
-        ('university', 'University Student'),
-        ('madrasa', 'Madrasa Student'),
-        ('graduate', 'Graduate'),
-        ('post_graduate', 'Post Graduate'),
     ]
     
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
@@ -146,210 +267,297 @@ class Student(models.Model):
     
     # Personal Information
     full_name = models.CharField(max_length=200)
-    date_of_birth = models.DateField()
-    gender = models.CharField(max_length=10, choices=GENDER_CHOICES)
-    phone = models.CharField(max_length=20)
-    emergency_contact = models.CharField(max_length=20, blank=True)
+    date_of_birth = models.DateField(null=True, blank=True)
+    gender = models.CharField(max_length=20, choices=GENDER_CHOICES, blank=True)
+    phone = models.CharField(max_length=20, blank=True)
     
     # Address
-    address = models.TextField()
-    city = models.CharField(max_length=100)
+    address = models.TextField(blank=True)
+    city = models.CharField(max_length=100, blank=True)
     country = models.CharField(max_length=100, default='Bangladesh')
     
     # Background
-    occupation = models.CharField(max_length=50, choices=OCCUPATION_CHOICES)
-    education = models.CharField(max_length=50, choices=EDUCATION_CHOICES)
-    previous_islamic_studies = models.TextField(blank=True)
+    occupation = models.CharField(max_length=50, choices=OCCUPATION_CHOICES, blank=True)
+    education_level = models.CharField(max_length=100, blank=True)
+    about_me = models.TextField(blank=True)
     
     # Preferences
-    preferred_language = models.CharField(max_length=50, blank=True, default='Bangla')
+    preferred_language = models.CharField(max_length=50, default='en')
+    timezone = models.CharField(max_length=50, default='Asia/Dhaka')
+    
+    # Profile
+    profile_picture = models.ImageField(upload_to='students/profiles/', null=True, blank=True)
+    cover_photo = models.ImageField(upload_to='students/covers/', null=True, blank=True)
     
     # Status
     is_active = models.BooleanField(default=True)
-    registration_date = models.DateTimeField(auto_now_add=True)
+    email_verified = models.BooleanField(default=False)
+    phone_verified = models.BooleanField(default=False)
     
-    # Profile
-    profile_picture = models.ImageField(upload_to='student_profiles/', null=True, blank=True)
-    
-    def age(self):
-        from datetime import date
-        today = date.today()
-        return today.year - self.date_of_birth.year - ((today.month, today.day) < (self.date_of_birth.month, self.date_of_birth.day))
-    
-    def __str__(self):
-        return f"{self.full_name} - {self.phone}"
-
-class Enrollment(models.Model):
-    PAYMENT_STATUS = [
-        ('pending', 'Pending'),
-        ('partial', 'Partial Payment'),
-        ('paid', 'Fully Paid'),
-        ('cancelled', 'Cancelled'),
-    ]
-    
-    ENROLLMENT_STATUS = [
-        ('active', 'Active'),
-        ('completed', 'Completed'),
-        ('dropped', 'Dropped'),
-        ('suspended', 'Suspended'),
-    ]
-    
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    student = models.ForeignKey(Student, on_delete=models.CASCADE, related_name='enrollments')
-    course = models.ForeignKey(Course, on_delete=models.CASCADE, related_name='enrollments')
-    
-    # Enrollment Details
-    enrolled_at = models.DateTimeField(auto_now_add=True)
-    start_date = models.DateField()
-    expected_end_date = models.DateField(null=True, blank=True)
-    actual_end_date = models.DateField(null=True, blank=True)
-    
-    # Payment Details
-    course_fee = models.DecimalField(max_digits=10, decimal_places=2)
-    discount_applied = models.DecimalField(max_digits=10, decimal_places=2, default=0)
-    total_paid = models.DecimalField(max_digits=10, decimal_places=2, default=0)
-    due_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0)
-    
-    # Status
-    enrollment_status = models.CharField(max_length=20, choices=ENROLLMENT_STATUS, default='active')
-    payment_status = models.CharField(max_length=20, choices=PAYMENT_STATUS, default='pending')
-    
-    # Progress Tracking
-    attendance_percentage = models.FloatField(default=0)
-    assignment_completion = models.FloatField(default=0)
-    overall_progress = models.FloatField(default=0)
-    
-    # Class Details
-    assigned_instructor = models.ForeignKey(Instructor, on_delete=models.SET_NULL, null=True, blank=True)
-    class_time_slot = models.CharField(max_length=100)
+    # Statistics
+    total_courses_enrolled = models.IntegerField(default=0)
+    total_courses_completed = models.IntegerField(default=0)
+    total_learning_hours = models.IntegerField(default=0)
+    streak_days = models.IntegerField(default=0)
     
     # Metadata
-    is_installment = models.BooleanField(default=False)
-    installment_count = models.IntegerField(default=1)
-    next_installment_date = models.DateField(null=True, blank=True)
-    
-    # Completion Tracking
-    completion_certificate_issued = models.BooleanField(default=False)
-    certificate_issue_date = models.DateField(null=True, blank=True)
+    registration_date = models.DateTimeField(auto_now_add=True)
+    last_active = models.DateTimeField(auto_now=True)
+    email_subscription = models.BooleanField(default=True)
     
     class Meta:
-        unique_together = ['student', 'course']
-        ordering = ['-enrolled_at']
-    
-    def update_progress(self):
-        # Calculate progress based on attendance and assignments
-        self.overall_progress = (self.attendance_percentage + self.assignment_completion) / 2
-        self.save()
-    
-    def check_completion(self):
-        if self.overall_progress >= 80 and not self.completion_certificate_issued:
-            self.enrollment_status = 'completed'
-            self.actual_end_date = timezone.now().date()
-            self.completion_certificate_issued = True
-            self.certificate_issue_date = timezone.now().date()
-            self.save()
-            return True
-        return False
+        ordering = ['-registration_date']
     
     def __str__(self):
-        return f"{self.student.full_name} - {self.course.name}"
-
-
-# Add to your models.py
-
-class SelfLearningCourse(models.Model):
-    """Extended course model for self-learning features"""
-    course = models.OneToOneField(Course, on_delete=models.CASCADE, related_name='self_learning')
+        return f"{self.full_name} ({self.user.username})"
     
-    # Self-learning specific fields
-    is_self_paced = models.BooleanField(default=True)
-    estimated_total_hours = models.IntegerField(default=0)
-    total_modules = models.IntegerField(default=0)
-    total_lessons = models.IntegerField(default=0)
-    total_quizzes = models.IntegerField(default=0)
-    certificate_available = models.BooleanField(default=True)
+    def get_age(self):
+        if self.date_of_birth:
+            today = timezone.now().date()
+            return today.year - self.date_of_birth.year - ((today.month, today.day) < (self.date_of_birth.month, self.date_of_birth.day))
+        return None
     
-    # Access settings
-    access_duration_days = models.IntegerField(default=365)  # Days after enrollment
-    max_attempts_per_quiz = models.IntegerField(default=3)
-    
-    # Completion requirements
-    min_quiz_score = models.IntegerField(default=70)  # Percentage
-    require_final_exam = models.BooleanField(default=False)
-    
-    def __str__(self):
-        return f"Self Learning: {self.course.name}"
+    def get_completion_rate(self):
+        if self.total_courses_enrolled > 0:
+            return (self.total_courses_completed / self.total_courses_enrolled) * 100
+        return 0
 
+# ==================== MODULE MODEL ====================
 class Module(models.Model):
     """Learning module containing lessons"""
-    self_learning_course = models.ForeignKey(SelfLearningCourse, on_delete=models.CASCADE, related_name='modules')
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    course = models.ForeignKey(Course, on_delete=models.CASCADE, related_name='modules')
     
     # Module details
     title = models.CharField(max_length=200)
-    description = models.TextField()
-    order = models.IntegerField()  # For sequencing
+    description = models.TextField(blank=True)
+    order = models.IntegerField(default=0)
     duration_minutes = models.IntegerField(default=0)
+    is_published = models.BooleanField(default=True)
+    
+    # Requirements
+    required_completion_percentage = models.IntegerField(default=0)
+    unlock_days_after_enrollment = models.IntegerField(default=0)
     
     # Metadata
-    is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     
     class Meta:
         ordering = ['order']
+        unique_together = ['course', 'order']
     
     def __str__(self):
         return f"{self.order}. {self.title}"
+    
+    def get_total_lessons(self):
+        return self.lessons.count()
+    
+    def get_total_duration(self):
+        return self.lessons.aggregate(total=models.Sum('duration_minutes'))['total'] or 0
 
+# ==================== LESSON MODEL ====================
 class Lesson(models.Model):
-    """Individual lesson with video content"""
     LESSON_TYPES = [
         ('video', 'Video Lesson'),
         ('article', 'Text Article'),
         ('quiz', 'Quiz'),
         ('assignment', 'Assignment'),
+        ('live_session', 'Live Session'),
+        ('download', 'Downloadable Content'),
     ]
     
+    VIDEO_SOURCES = [
+        ('youtube', 'YouTube'),
+        ('vimeo', 'Vimeo'),
+        ('wistia', 'Wistia'),
+        ('custom', 'Custom URL'),
+        ('upload', 'Uploaded Video'),
+    ]
+    
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     module = models.ForeignKey(Module, on_delete=models.CASCADE, related_name='lessons')
     
     # Lesson details
     title = models.CharField(max_length=200)
+    slug = models.SlugField(blank=True)
     lesson_type = models.CharField(max_length=20, choices=LESSON_TYPES, default='video')
     description = models.TextField(blank=True)
-    content = models.TextField(blank=True)  # For articles
-    youtube_url = models.URLField(blank=True)  # For videos
+    content = models.TextField(blank=True)  # For articles/HTML content
+    
+    # Video settings
+    video_source = models.CharField(max_length=20, choices=VIDEO_SOURCES, default='youtube', blank=True)
+    video_url = models.URLField(blank=True)
+    video_file = models.FileField(upload_to=lesson_video_path, null=True, blank=True)
     duration_minutes = models.IntegerField(default=0)
-    order = models.IntegerField()  # For sequencing within module
     
-    # Requirements
-    is_required = models.BooleanField(default=True)
-    prerequisite_lessons = models.ManyToManyField('self', symmetrical=False, blank=True)
+    # Requirements and settings
+    order = models.IntegerField(default=0)
+    is_free = models.BooleanField(default=False)
+    is_published = models.BooleanField(default=True)
+    require_completion = models.BooleanField(default=True)
+    points_value = models.IntegerField(default=10)
     
-    # Progress tracking
-    points_value = models.IntegerField(default=10)  # Points earned on completion
+    # Interactive features
+    enable_comments = models.BooleanField(default=True)
+    enable_download = models.BooleanField(default=False)
+    
+    # Resources
+    attached_files = models.FileField(upload_to='lessons/files/', null=True, blank=True)
+    external_resources = models.TextField(blank=True)  # JSON or text list
     
     # Metadata
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    published_at = models.DateTimeField(null=True, blank=True)
+    
+    class Meta:
+        ordering = ['order']
+        unique_together = ['module', 'order']
+    
+    def save(self, *args, **kwargs):
+        if not self.slug:
+            self.slug = slugify(f"{self.module.course.slug}-module-{self.module.order}-lesson-{self.order}")
+        super().save(*args, **kwargs)
+    
+    def __str__(self):
+        return f"{self.module.order}.{self.order} {self.title}"
+    
+    def get_youtube_id(self):
+        """Extract YouTube video ID from URL"""
+        if not self.video_url or 'youtube' not in self.video_url:
+            return None
+        import re
+        pattern = r'(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})'
+        match = re.search(pattern, self.video_url)
+        return match.group(1) if match else None
+    
+    def get_embed_url(self):
+        """Get embed URL for video"""
+        if self.video_source == 'youtube' and self.get_youtube_id():
+            return f'https://www.youtube.com/embed/{self.get_youtube_id()}'
+        elif self.video_source == 'vimeo':
+            # Extract Vimeo ID
+            import re
+            pattern = r'vimeo\.com\/(\d+)'
+            match = re.search(pattern, self.video_url)
+            if match:
+                return f'https://player.vimeo.com/video/{match.group(1)}'
+        return self.video_url
+
+# ==================== QUIZ MODEL ====================
+class Quiz(models.Model):
+    QUIZ_TYPES = [
+        ('practice', 'Practice Quiz'),
+        ('module', 'Module Quiz'),
+        ('final', 'Final Exam'),
+        ('assessment', 'Assessment'),
+    ]
+    
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    lesson = models.OneToOneField(Lesson, on_delete=models.CASCADE, related_name='quiz', null=True, blank=True)
+    module = models.ForeignKey(Module, on_delete=models.CASCADE, related_name='quizzes', null=True, blank=True)
+    course = models.ForeignKey(Course, on_delete=models.CASCADE, related_name='quizzes', null=True, blank=True)
+    
+    # Quiz details
+    title = models.CharField(max_length=200)
+    description = models.TextField(blank=True)
+    quiz_type = models.CharField(max_length=20, choices=QUIZ_TYPES, default='practice')
+    
+    # Settings
+    duration_minutes = models.IntegerField(default=30)
+    passing_score = models.IntegerField(default=70)
+    max_attempts = models.IntegerField(default=3)
+    show_correct_answers = models.BooleanField(default=True)
+    randomize_questions = models.BooleanField(default=True)
+    require_passing = models.BooleanField(default=False)
+    
+    # Grading
+    total_points = models.IntegerField(default=100)
+    weight_percentage = models.IntegerField(default=0)  # For final grade calculation
+    
+    # Status
+    is_published = models.BooleanField(default=True)
+    is_active = models.BooleanField(default=True)
+    
+    # Metadata
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    available_from = models.DateTimeField(null=True, blank=True)
+    available_until = models.DateTimeField(null=True, blank=True)
+    
+    def __str__(self):
+        return f"{self.title} ({self.get_quiz_type_display()})"
+    
+    def get_question_count(self):
+        return self.questions.count()
+    
+    def get_total_duration(self):
+        return self.duration_minutes
+
+# ==================== QUIZ QUESTION MODEL ====================
+class QuizQuestion(models.Model):
+    QUESTION_TYPES = [
+        ('mcq_single', 'Multiple Choice (Single)'),
+        ('mcq_multiple', 'Multiple Choice (Multiple)'),
+        ('true_false', 'True/False'),
+        ('short_answer', 'Short Answer'),
+        ('essay', 'Essay'),
+        ('matching', 'Matching'),
+        ('fill_blank', 'Fill in the Blanks'),
+    ]
+    
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    quiz = models.ForeignKey(Quiz, on_delete=models.CASCADE, related_name='questions')
+    
+    # Question details
+    question_type = models.CharField(max_length=20, choices=QUESTION_TYPES, default='mcq_single')
+    question_text = models.TextField()
+    explanation = models.TextField(blank=True)
+    points = models.IntegerField(default=10)
+    order = models.IntegerField(default=0)
+    
+    # Media
+    image = models.ImageField(upload_to='quiz/questions/', null=True, blank=True)
+    audio = models.FileField(upload_to='quiz/audio/', null=True, blank=True)
+    video_url = models.URLField(blank=True)
+    
+    # Settings
+    is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     
     class Meta:
         ordering = ['order']
     
-    def get_youtube_id(self):
-        """Extract YouTube video ID from URL"""
-        if not self.youtube_url:
-            return None
-        import re
-        pattern = r'(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})'
-        match = re.search(pattern, self.youtube_url)
-        return match.group(1) if match else None
+    def __str__(self):
+        return f"Q{self.order}: {self.question_text[:50]}..."
+
+# ==================== QUESTION OPTION MODEL ====================
+class QuestionOption(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    question = models.ForeignKey(QuizQuestion, on_delete=models.CASCADE, related_name='options')
+    
+    # Option details
+    option_text = models.TextField()
+    is_correct = models.BooleanField(default=False)
+    explanation = models.TextField(blank=True)
+    order = models.IntegerField(default=0)
+    
+    # For matching questions
+    match_text = models.TextField(blank=True)
+    
+    class Meta:
+        ordering = ['order']
     
     def __str__(self):
-        return f"{self.module.order}.{self.order} {self.title}"
+        return f"Option {self.order}: {self.option_text[:30]}..."
 
+# ==================== INTERACTIVE VIDEO MCQ MODEL ====================
 class InteractiveMCQ(models.Model):
     """MCQ that appears during video playback"""
-    lesson = models.ForeignKey(Lesson, on_delete=models.CASCADE, related_name='mcqs')
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    lesson = models.ForeignKey(Lesson, on_delete=models.CASCADE, related_name='interactive_mcqs')
     
     # Question details
     question = models.TextField()
@@ -370,32 +578,115 @@ class InteractiveMCQ(models.Model):
     # Attempt limits
     max_attempts = models.IntegerField(default=1)
     
-    def __str__(self):
-        return f"MCQ at {self.appear_at_second}s: {self.question[:50]}..."
-
-class MCQOption(models.Model):
-    """Options for MCQ questions"""
-    mcq = models.ForeignKey(InteractiveMCQ, on_delete=models.CASCADE, related_name='options')
+    # Status
+    is_active = models.BooleanField(default=True)
     
-    # Option details
-    text = models.TextField()
-    is_correct = models.BooleanField(default=False)
-    explanation = models.TextField(blank=True)  # Shown when answered
-    
-    order = models.IntegerField(default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
     
     class Meta:
-        ordering = ['order']
+        ordering = ['appear_at_second']
     
     def __str__(self):
-        return f"{self.text[:50]}..."
-
-class StudentLessonProgress(models.Model):
-    """Tracks student progress through lessons"""
-    student = models.ForeignKey(Student, on_delete=models.CASCADE, related_name='lesson_progress')
-    lesson = models.ForeignKey(Lesson, on_delete=models.CASCADE, related_name='student_progress')
+        return f"Interactive MCQ at {self.appear_at_second}s: {self.question[:50]}..."
     
-    # Progress tracking
+    def get_options(self):
+        return self.options.all()
+
+# ==================== ENROLLMENT MODEL ====================
+# In your models.py - add these relationships that are missing:
+
+# Add to Enrollment model if not present:
+class Enrollment(models.Model):
+    ENROLLMENT_STATUS = [
+        ('pending', 'Pending'),
+        ('active', 'Active'),
+        ('completed', 'Completed'),
+        ('dropped', 'Dropped'),
+        ('suspended', 'Suspended'),
+        ('expired', 'Expired'),
+    ]
+    
+    PAYMENT_STATUS = [
+        ('pending', 'Payment Pending'),
+        ('partial', 'Partial Payment'),
+        ('paid', 'Fully Paid'),
+        ('refunded', 'Refunded'),
+        ('failed', 'Payment Failed'),
+        ('cancelled', 'Cancelled'),
+    ]
+    
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    student = models.ForeignKey(Student, on_delete=models.CASCADE, related_name='enrollments')
+    course = models.ForeignKey(Course, on_delete=models.CASCADE, related_name='enrollments')
+    
+    # Enrollment Details
+    enrolled_at = models.DateTimeField(auto_now_add=True)
+    start_date = models.DateField(null=True, blank=True)
+    end_date = models.DateField(null=True, blank=True)
+    completed_at = models.DateTimeField(null=True, blank=True)
+    
+    # Status
+    enrollment_status = models.CharField(max_length=20, choices=ENROLLMENT_STATUS, default='pending')
+    payment_status = models.CharField(max_length=20, choices=PAYMENT_STATUS, default='pending')
+    
+    # Progress Tracking
+    progress_percentage = models.FloatField(default=0.0)
+    last_accessed = models.DateTimeField(null=True, blank=True)
+    total_time_spent = models.IntegerField(default=0)  # in minutes
+    
+    # Certificate
+    certificate_issued = models.BooleanField(default=False)
+    certificate_issue_date = models.DateField(null=True, blank=True)
+    certificate_id = models.CharField(max_length=100, blank=True)
+    
+    # Payment Details
+    amount_paid = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
+    final_grade = models.CharField(max_length=10, blank=True)
+    
+    # Remove these fields that were causing errors:
+    # installment_count = models.IntegerField(default=1)  # REMOVE
+    # is_installment = models.BooleanField(default=False)  # REMOVE
+    # class_time_slot = models.CharField(max_length=100)  # REMOVE
+    # next_installment_date = models.DateField(null=True, blank=True)  # REMOVE
+    
+    # Add these fields to track installments:
+    installment_plan = models.JSONField(default=dict, blank=True)  # Store installment details as JSON
+    
+    class Meta:
+        unique_together = ['student', 'course']
+        ordering = ['-enrolled_at']
+    
+    def __str__(self):
+        return f"{self.student.full_name} - {self.course.name} ({self.get_enrollment_status_display()})"
+    
+    def is_active(self):
+        return self.enrollment_status == 'active'
+    
+    def update_progress(self):
+        """Update progress percentage"""
+        total_lessons = Lesson.objects.filter(
+            module__course=self.course,
+            is_published=True,
+            require_completion=True
+        ).count()
+        
+        if total_lessons == 0:
+            self.progress_percentage = 0
+        else:
+            completed_lessons = StudentLessonProgress.objects.filter(
+                student=self.student,
+                lesson__module__course=self.course,
+                status='completed'
+            ).count()
+            self.progress_percentage = (completed_lessons / total_lessons) * 100
+        
+        self.save()
+        return self.progress_percentage
+
+
+# ==================== STUDENT PROGRESS MODELS ====================
+class StudentLessonProgress(models.Model):
     STATUS_CHOICES = [
         ('not_started', 'Not Started'),
         ('in_progress', 'In Progress'),
@@ -403,6 +694,12 @@ class StudentLessonProgress(models.Model):
         ('locked', 'Locked'),
     ]
     
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    student = models.ForeignKey(Student, on_delete=models.CASCADE, related_name='lesson_progress')
+    lesson = models.ForeignKey(Lesson, on_delete=models.CASCADE, related_name='student_progress')
+    enrollment = models.ForeignKey(Enrollment, on_delete=models.CASCADE, related_name='lesson_progress', null=True)
+    
+    # Progress tracking
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='not_started')
     started_at = models.DateTimeField(null=True, blank=True)
     completed_at = models.DateTimeField(null=True, blank=True)
@@ -410,138 +707,482 @@ class StudentLessonProgress(models.Model):
     
     # Video-specific tracking
     video_progress_seconds = models.IntegerField(default=0)
-    video_watch_duration = models.IntegerField(default=0)  # Total seconds watched
+    video_total_watched = models.IntegerField(default=0)  # Total seconds watched
     
-    # Points earned
+    # Points and scores
     points_earned = models.IntegerField(default=0)
+    quiz_score = models.IntegerField(null=True, blank=True)
     
-    # Quiz attempts
-    quiz_attempts = models.IntegerField(default=0)
-    best_quiz_score = models.IntegerField(null=True, blank=True)
+    # Attempts
+    attempts_count = models.IntegerField(default=0)
     
     class Meta:
-        unique_together = ['student', 'lesson']
+        unique_together = ['student', 'lesson', 'enrollment']
     
     def __str__(self):
         return f"{self.student.full_name} - {self.lesson.title} ({self.status})"
+    
+    def mark_as_completed(self, save=True):
+        self.status = 'completed'
+        self.completed_at = timezone.now()
+        if not self.started_at:
+            self.started_at = timezone.now()
+        if save:
+            self.save()
+        
+        # Update enrollment progress
+        if self.enrollment:
+            self.enrollment.update_progress()
 
-class StudentMCQResponse(models.Model):
-    """Records student responses to interactive MCQs"""
-    student = models.ForeignKey(Student, on_delete=models.CASCADE, related_name='mcq_responses')
-    mcq = models.ForeignKey(InteractiveMCQ, on_delete=models.CASCADE, related_name='responses')
+class StudentQuizAttempt(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    student = models.ForeignKey(Student, on_delete=models.CASCADE, related_name='quiz_attempts')
+    quiz = models.ForeignKey(Quiz, on_delete=models.CASCADE, related_name='attempts')
+    enrollment = models.ForeignKey(Enrollment, on_delete=models.CASCADE, related_name='quiz_attempts', null=True)
     
-    # Response details
-    selected_options = models.ManyToManyField(MCQOption, related_name='selected_in_responses')
-    is_correct = models.BooleanField()
-    points_earned = models.IntegerField(default=0)
-    
-    # Timing
-    response_time_seconds = models.IntegerField()
-    attempted_at = models.DateTimeField(auto_now_add=True)
-    
-    def __str__(self):
-        return f"{self.student.full_name} - MCQ {self.mcq.id}"
-
-class StudentCourseProgress(models.Model):
-    """Overall course progress tracking"""
-    student = models.ForeignKey(Student, on_delete=models.CASCADE, related_name='course_progress')
-    course = models.ForeignKey(Course, on_delete=models.CASCADE, related_name='student_course_progress')
-    
-    # Progress metrics
-    overall_progress = models.IntegerField(default=0)  # Percentage
-    completed_modules = models.IntegerField(default=0)
-    completed_lessons = models.IntegerField(default=0)
-    total_points = models.IntegerField(default=0)
-    
-    # Time tracking
+    # Attempt details
+    attempt_number = models.IntegerField(default=1)
     started_at = models.DateTimeField(auto_now_add=True)
-    last_accessed = models.DateTimeField(auto_now=True)
-    estimated_completion_date = models.DateField(null=True, blank=True)
+    submitted_at = models.DateTimeField(null=True, blank=True)
+    time_taken_seconds = models.IntegerField(default=0)
     
-    # Current position
-    current_module = models.ForeignKey(Module, on_delete=models.SET_NULL, null=True, blank=True)
-    current_lesson = models.ForeignKey(Lesson, on_delete=models.SET_NULL, null=True, blank=True)
+    # Results
+    score = models.FloatField(default=0.0)
+    total_questions = models.IntegerField(default=0)
+    correct_answers = models.IntegerField(default=0)
+    wrong_answers = models.IntegerField(default=0)
+    skipped_questions = models.IntegerField(default=0)
+    
+    # Status
+    is_completed = models.BooleanField(default=False)
+    is_passed = models.BooleanField(default=False)
+    
+    # Metadata
+    ip_address = models.GenericIPAddressField(null=True, blank=True)
+    user_agent = models.TextField(blank=True)
     
     class Meta:
-        unique_together = ['student', 'course']
-    
-    def update_progress(self):
-        """Recalculate progress"""
-        total_lessons = Lesson.objects.filter(
-            module__self_learning_course__course=self.course,
-            is_required=True
-        ).count()
-        
-        completed_lessons = StudentLessonProgress.objects.filter(
-            student=self.student,
-            lesson__module__self_learning_course__course=self.course,
-            status='completed'
-        ).count()
-        
-        if total_lessons > 0:
-            self.overall_progress = int((completed_lessons / total_lessons) * 100)
-        
-        self.save()
+        ordering = ['-started_at']
+        unique_together = ['student', 'quiz', 'attempt_number']
     
     def __str__(self):
-        return f"{self.student.full_name} - {self.course.name} ({self.overall_progress}%)"
+        return f"{self.student.full_name} - {self.quiz.title} (Attempt {self.attempt_number})"
+    
+    def calculate_score(self):
+        """Calculate final score"""
+        total_points = 0
+        earned_points = 0
+        
+        for response in self.responses.all():
+            total_points += response.question.points
+            if response.is_correct:
+                earned_points += response.question.points
+        
+        if total_points > 0:
+            self.score = (earned_points / total_points) * 100
+        else:
+            self.score = 0
+        
+        self.is_passed = self.score >= self.quiz.passing_score
+        self.save()
+        return self.score
 
+class QuizResponse(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    attempt = models.ForeignKey(StudentQuizAttempt, on_delete=models.CASCADE, related_name='responses')
+    question = models.ForeignKey(QuizQuestion, on_delete=models.CASCADE, related_name='responses')
+    
+    # Response data (store as JSON for flexibility)
+    answer_data = models.JSONField(default=dict)
+    selected_options = models.ManyToManyField(QuestionOption, blank=True)
+    text_response = models.TextField(blank=True)
+    
+    # Grading
+    is_correct = models.BooleanField(default=False)
+    points_earned = models.IntegerField(default=0)
+    feedback = models.TextField(blank=True)
+    
+    # Timing
+    time_spent_seconds = models.IntegerField(default=0)
+    
+    class Meta:
+        unique_together = ['attempt', 'question']
+    
+    def __str__(self):
+        return f"Response to Q{self.question.order}"
 
-
-
+# ==================== PAYMENT MODELS ====================
 class Payment(models.Model):
     PAYMENT_METHODS = [
         ('bkash', 'bKash'),
         ('nagad', 'Nagad'),
         ('rocket', 'Rocket'),
         ('bank', 'Bank Transfer'),
-        ('cash', 'Cash'),
+        ('card', 'Credit/Debit Card'),
+        ('cod', 'Cash on Delivery'),
+        ('free', 'Free'),
+    ]
+    
+    PAYMENT_STATUS = [
+        ('pending', 'Pending'),
+        ('processing', 'Processing'),
+        ('completed', 'Completed'),
+        ('failed', 'Failed'),
+        ('refunded', 'Refunded'),
+        ('cancelled', 'Cancelled'),
     ]
     
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     enrollment = models.ForeignKey(Enrollment, on_delete=models.CASCADE, related_name='payments')
+    student = models.ForeignKey(Student, on_delete=models.CASCADE, related_name='payments')
     
     # Payment Details
     amount = models.DecimalField(max_digits=10, decimal_places=2)
     payment_method = models.CharField(max_length=20, choices=PAYMENT_METHODS)
-    transaction_id = models.CharField(max_length=100, unique=True)
+    transaction_id = models.CharField(max_length=200, unique=True)
+    gateway_transaction_id = models.CharField(max_length=200, blank=True)
+    
+    # Status
+    status = models.CharField(max_length=20, choices=PAYMENT_STATUS, default='pending')
+    is_verified = models.BooleanField(default=False)
     
     # Installment Info
     installment_number = models.IntegerField(default=1)
-    is_installment = models.BooleanField(default=False)
-    
-    # Status
-    is_verified = models.BooleanField(default=False)
-    verified_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
+    total_installments = models.IntegerField(default=1)
     
     # Metadata
     payment_date = models.DateTimeField(auto_now_add=True)
     verified_at = models.DateTimeField(null=True, blank=True)
+    verified_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
     
-    # Reference
-    reference_number = models.CharField(max_length=100, blank=True)
+    # Gateway Response
+    gateway_response = models.JSONField(default=dict, blank=True)
     notes = models.TextField(blank=True)
     
-    def verify_payment(self, user):
-        self.is_verified = True
-        self.verified_by = user
-        self.verified_at = timezone.now()
-        self.save()
-        
-        # Update enrollment payment status
-        enrollment = self.enrollment
-        enrollment.total_paid += self.amount
-        enrollment.due_amount = enrollment.course_fee - enrollment.total_paid
-        
-        if enrollment.due_amount <= 0:
-            enrollment.payment_status = 'paid'
-        elif enrollment.total_paid > 0:
-            enrollment.payment_status = 'partial'
-        
-        enrollment.save()
+    class Meta:
+        ordering = ['-payment_date']
     
     def __str__(self):
-        return f"Payment {self.transaction_id} - {self.amount} BDT"
+        return f"Payment {self.transaction_id} - ৳{self.amount}"
+    
+    def verify_payment(self, user=None):
+        self.is_verified = True
+        self.status = 'completed'
+        self.verified_at = timezone.now()
+        if user:
+            self.verified_by = user
+        self.save()
+        
+        # Update enrollment
+        self.enrollment.payment_status = 'paid'
+        self.enrollment.enrollment_status = 'active'
+        self.enrollment.start_date = timezone.now().date()
+        self.enrollment.save()
+        
+        # Update student statistics
+        self.student.total_courses_enrolled += 1
+        self.student.save()
+
+# ==================== CERTIFICATE MODEL ====================
+class Certificate(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    enrollment = models.OneToOneField(Enrollment, on_delete=models.CASCADE, related_name='certificate')
+    student = models.ForeignKey(Student, on_delete=models.CASCADE, related_name='certificates')
+    course = models.ForeignKey(Course, on_delete=models.CASCADE, related_name='certificates')
+    
+    # Certificate Details
+    certificate_id = models.CharField(max_length=100, unique=True)
+    certificate_url = models.URLField(blank=True)
+    issued_date = models.DateField(auto_now_add=True)
+    expiry_date = models.DateField(null=True, blank=True)
+    
+    # Content
+    student_name = models.CharField(max_length=200)
+    course_name = models.CharField(max_length=200)
+    completion_date = models.DateField()
+    grade = models.CharField(max_length=20, blank=True)
+    final_score = models.FloatField(null=True, blank=True)
+    
+    # Verification
+    verification_code = models.CharField(max_length=50, unique=True)
+    is_verified = models.BooleanField(default=True)
+    
+    # Template
+    template = models.CharField(max_length=100, default='default')
+    background_image = models.ImageField(upload_to='certificates/backgrounds/', null=True, blank=True)
+    
+    # Digital Signature
+    signed_by = models.CharField(max_length=200, blank=True)
+    signature_image = models.ImageField(upload_to='certificates/signatures/', null=True, blank=True)
+    
+    # Metadata
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    downloaded_count = models.IntegerField(default=0)
+    
+    class Meta:
+        ordering = ['-issued_date']
+    
+    def __str__(self):
+        return f"Certificate {self.certificate_id} - {self.student_name}"
+    
+    def generate_certificate_id(self):
+        """Generate unique certificate ID"""
+        import random
+        import string
+        if not self.certificate_id:
+            prefix = "CERT"
+            timestamp = timezone.now().strftime('%Y%m%d')
+            random_str = ''.join(random.choices(string.ascii_uppercase + string.digits, k=8))
+            self.certificate_id = f"{prefix}-{timestamp}-{random_str}"
+        return self.certificate_id
+    
+    def save(self, *args, **kwargs):
+        if not self.certificate_id:
+            self.generate_certificate_id()
+        if not self.verification_code:
+            import random
+            import string
+            self.verification_code = ''.join(random.choices(string.ascii_uppercase + string.digits, k=16))
+        super().save(*args, **kwargs)
+    
+    def get_verification_url(self):
+        return f"/verify-certificate/{self.verification_code}/"
+
+# ==================== RESOURCE MODEL ====================
+class CourseResource(models.Model):
+    RESOURCE_TYPES = [
+        ('pdf', 'PDF Document'),
+        ('video', 'Video File'),
+        ('audio', 'Audio File'),
+        ('image', 'Image'),
+        ('link', 'External Link'),
+        ('document', 'Document'),
+        ('presentation', 'Presentation'),
+        ('spreadsheet', 'Spreadsheet'),
+        ('zip', 'Zip Archive'),
+        ('other', 'Other'),
+    ]
+    
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    course = models.ForeignKey(Course, on_delete=models.CASCADE, related_name='resources')
+    
+    # Resource details
+    title = models.CharField(max_length=200)
+    description = models.TextField(blank=True)
+    resource_type = models.CharField(max_length=20, choices=RESOURCE_TYPES)
+    
+    # File or URL
+    file = models.FileField(upload_to='courses/resources/', null=True, blank=True)
+    url = models.URLField(blank=True)
+    
+    # Access control
+    is_free = models.BooleanField(default=False)
+    available_after_days = models.IntegerField(default=0)
+    
+    # Metadata
+    order = models.IntegerField(default=0)
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        ordering = ['order']
+    
+    def __str__(self):
+        return f"{self.title} ({self.get_resource_type_display()})"
+    
+    def get_file_size(self):
+        if self.file and self.file.size:
+            size = self.file.size
+            for unit in ['B', 'KB', 'MB', 'GB']:
+                if size < 1024.0:
+                    return f"{size:.1f} {unit}"
+                size /= 1024.0
+            return f"{size:.1f} TB"
+        return "0 B"
+
+# ==================== REVIEW MODEL ====================
+class CourseReview(models.Model):
+    RATING_CHOICES = [
+        (1, '★☆☆☆☆'),
+        (2, '★★☆☆☆'),
+        (3, '★★★☆☆'),
+        (4, '★★★★☆'),
+        (5, '★★★★★'),
+    ]
+    
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    student = models.ForeignKey(Student, on_delete=models.CASCADE, related_name='reviews')
+    course = models.ForeignKey(Course, on_delete=models.CASCADE, related_name='reviews')
+    enrollment = models.ForeignKey(Enrollment, on_delete=models.CASCADE, related_name='reviews', null=True)
+    
+    # Review content
+    rating = models.IntegerField(choices=RATING_CHOICES)
+    title = models.CharField(max_length=200)
+    content = models.TextField()
+    
+    # Verification
+    is_verified = models.BooleanField(default=False)
+    is_helpful = models.BooleanField(default=True)
+    
+    # Status
+    is_published = models.BooleanField(default=False)
+    is_edited = models.BooleanField(default=False)
+    
+    # Metadata
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        unique_together = ['student', 'course']
+        ordering = ['-created_at']
+    
+    def __str__(self):
+        return f"{self.student.full_name} - {self.rating}★ for {self.course.name}"
+    
+    def save(self, *args, **kwargs):
+        super().save(*args, **kwargs)
+        # Update course average rating
+        reviews = CourseReview.objects.filter(course=self.course, is_published=True)
+        if reviews.exists():
+            avg_rating = reviews.aggregate(models.Avg('rating'))['rating__avg']
+            self.course.average_rating = round(avg_rating, 1)
+            self.course.review_count = reviews.count()
+            self.course.save()
+
+# ==================== COUPON MODEL ====================
+class Coupon(models.Model):
+    DISCOUNT_TYPES = [
+        ('percentage', 'Percentage'),
+        ('fixed', 'Fixed Amount'),
+        ('free', '100% Off'),
+    ]
+    
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    code = models.CharField(max_length=50, unique=True)
+    discount_type = models.CharField(max_length=20, choices=DISCOUNT_TYPES, default='percentage')
+    discount_value = models.DecimalField(max_digits=10, decimal_places=2)
+    
+    # Usage limits
+    usage_limit = models.IntegerField(default=100)
+    used_count = models.IntegerField(default=0)
+    per_user_limit = models.IntegerField(default=1)
+    
+    # Validity
+    valid_from = models.DateTimeField()
+    valid_until = models.DateTimeField()
+    is_active = models.BooleanField(default=True)
+    
+    # Applicability
+    applicable_courses = models.ManyToManyField(Course, blank=True, related_name='coupons')
+    minimum_cart_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
+    
+    # Metadata
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
+    
+    def __str__(self):
+        return f"{self.code} ({self.discount_value}{'%' if self.discount_type == 'percentage' else '৳'})"
+    
+    def is_valid(self, user=None, course=None):
+        """Check if coupon is valid for use"""
+        now = timezone.now()
+        
+        if not self.is_active:
+            return False, "Coupon is not active"
+        
+        if now < self.valid_from:
+            return False, "Coupon is not yet valid"
+        
+        if now > self.valid_until:
+            return False, "Coupon has expired"
+        
+        if self.used_count >= self.usage_limit:
+            return False, "Coupon usage limit reached"
+        
+        if user:
+            user_usage = Enrollment.objects.filter(
+                student__user=user,
+                payments__transaction_id__contains=self.code
+            ).count()
+            if user_usage >= self.per_user_limit:
+                return False, "You have already used this coupon"
+        
+        return True, "Coupon is valid"
+    
+    def calculate_discount(self, amount):
+        """Calculate discount amount"""
+        if self.discount_type == 'percentage':
+            discount = (amount * self.discount_value) / 100
+        elif self.discount_type == 'fixed':
+            discount = min(self.discount_value, amount)
+        else:  # free
+            discount = amount
+        
+        return Decimal(discount)
+
+# ==================== WISHLIST MODEL ====================
+class Wishlist(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    student = models.ForeignKey(Student, on_delete=models.CASCADE, related_name='wishlist')
+    course = models.ForeignKey(Course, on_delete=models.CASCADE, related_name='wishlisted_by')
+    added_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        unique_together = ['student', 'course']
+        ordering = ['-added_at']
+    
+    def __str__(self):
+        return f"{self.student.full_name} wishes {self.course.name}"
+
+# ==================== NOTIFICATION MODEL ====================
+class Notification(models.Model):
+    TYPES = [
+        ('enrollment', 'New Enrollment'),
+        ('completion', 'Course Completion'),
+        ('payment', 'Payment Received'),
+        ('certificate', 'Certificate Issued'),
+        ('reminder', 'Reminder'),
+        ('announcement', 'Announcement'),
+        ('promotion', 'Promotion'),
+    ]
+    
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    recipient = models.ForeignKey(User, on_delete=models.CASCADE, related_name='notifications')
+    
+    # Content
+    notification_type = models.CharField(max_length=20, choices=TYPES)
+    title = models.CharField(max_length=200)
+    message = models.TextField()
+    data = models.JSONField(default=dict, blank=True)
+    
+    # Status
+    is_read = models.BooleanField(default=False)
+    is_sent = models.BooleanField(default=False)
+    send_email = models.BooleanField(default=False)
+    
+    # Related objects
+    enrollment = models.ForeignKey(Enrollment, on_delete=models.SET_NULL, null=True, blank=True)
+    course = models.ForeignKey(Course, on_delete=models.SET_NULL, null=True, blank=True)
+    
+    # Metadata
+    created_at = models.DateTimeField(auto_now_add=True)
+    read_at = models.DateTimeField(null=True, blank=True)
+    
+    class Meta:
+        ordering = ['-created_at']
+    
+    def __str__(self):
+        return f"{self.notification_type} - {self.recipient.username}"
+    
+    def mark_as_read(self):
+        self.is_read = True
+        self.read_at = timezone.now()
+        self.save()
+
+
 
 class BlogPost(models.Model):
     CATEGORIES = [
@@ -722,48 +1363,7 @@ class Office(models.Model):
     def __str__(self):
         return f"{self.name} - {self.city}"
 
-class Notification(models.Model):
-    TYPES = [
-        ('payment_reminder', 'Payment Reminder'),
-        ('class_reminder', 'Class Reminder'),
-        ('assignment_due', 'Assignment Due'),
-        ('course_completion', 'Course Completion'),
-        ('general', 'General Announcement'),
-    ]
-    
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    
-    # Recipient
-    recipient = models.ForeignKey(User, on_delete=models.CASCADE)
-    
-    # Content
-    title = models.CharField(max_length=200)
-    message = models.TextField()
-    notification_type = models.CharField(max_length=50, choices=TYPES)
-    
-    # Related Objects
-    enrollment = models.ForeignKey(Enrollment, on_delete=models.SET_NULL, null=True, blank=True)
-    payment = models.ForeignKey(Payment, on_delete=models.SET_NULL, null=True, blank=True)
-    
-    # Status
-    is_read = models.BooleanField(default=False)
-    is_sent = models.BooleanField(default=False)
-    send_email = models.BooleanField(default=False)
-    
-    # Timing
-    created_at = models.DateTimeField(auto_now_add=True)
-    scheduled_for = models.DateTimeField(null=True, blank=True)
-    read_at = models.DateTimeField(null=True, blank=True)
-    
-    # Action
-    action_url = models.URLField(blank=True)
-    
-    class Meta:
-        ordering = ['-created_at']
-    
-    def __str__(self):
-        return f"{self.notification_type} - {self.recipient.username}"
-    
+   
 # Add to your existing models.py
 class ContactMessage(models.Model):
     SUBJECT_CHOICES = [

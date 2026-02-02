@@ -12,7 +12,7 @@ python manage.py runserver
 git init
 
 git add .
-git commit -m "Fix navabr Profile and lesson view "
+git commit -m "Updated the model and demo data "
 git push -u origin main
 python manage.py runserver
 
