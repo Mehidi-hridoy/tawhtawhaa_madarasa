@@ -1,0 +1,507 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load widget_tweaks %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .registration-container {
+        min-height: calc(100vh - 300px);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 40px 0;
+    }
+    
+    .registration-card {
+        background: white;
+        border-radius: 10px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+        padding: 40px;
+        width: 100%;
+        max-width: 800px;
+    }
+    
+    .registration-header {
+        text-align: center;
+        margin-bottom: 30px;
+    }
+    
+    .registration-header h2 {
+        color: #2c3e50;
+        font-weight: 600;
+        margin-bottom: 10px;
+    }
+    
+    .registration-header p {
+        color: #7f8c8d;
+        font-size: 16px;
+    }
+    
+    .form-group {
+        margin-bottom: 20px;
+    }
+    
+    .form-group label {
+        font-weight: 500;
+        color: #2c3e50;
+        margin-bottom: 8px;
+    }
+    
+    .form-control {
+        border: 1px solid #ddd;
+        border-radius: 5px;
+        padding: 10px 15px;
+        font-size: 15px;
+        transition: all 0.3s;
+    }
+    
+    .form-control:focus {
+        border-color: #3498db;
+        box-shadow: 0 0 0 0.2rem rgba(52, 152, 219, 0.25);
+    }
+    
+    .form-text {
+        font-size: 13px;
+        color: #7f8c8d;
+        margin-top: 5px;
+    }
+    
+    .form-section {
+        margin-bottom: 30px;
+        padding-bottom: 20px;
+        border-bottom: 1px solid #eee;
+    }
+    
+    .form-section h4 {
+        color: #2c3e50;
+        margin-bottom: 20px;
+        padding-bottom: 10px;
+        border-bottom: 2px solid #3498db;
+    }
+    
+    .error-message {
+        color: #e74c3c;
+        font-size: 14px;
+        margin-top: 5px;
+    }
+    
+    .success-message {
+        color: #27ae60;
+        font-size: 14px;
+        margin-top: 5px;
+    }
+    
+    .btn-register {
+        background: linear-gradient(135deg, #3498db, #2980b9);
+        color: white;
+        border: none;
+        padding: 12px 30px;
+        font-size: 16px;
+        font-weight: 500;
+        border-radius: 5px;
+        cursor: pointer;
+        transition: all 0.3s;
+        width: 100%;
+    }
+    
+    .btn-register:hover {
+        background: linear-gradient(135deg, #2980b9, #1c5980);
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+    }
+    
+    .login-link {
+        text-align: center;
+        margin-top: 20px;
+        color: #7f8c8d;
+    }
+    
+    .login-link a {
+        color: #3498db;
+        text-decoration: none;
+        font-weight: 500;
+    }
+    
+    .login-link a:hover {
+        text-decoration: underline;
+    }
+    
+    .password-strength {
+        margin-top: 5px;
+        font-size: 14px;
+    }
+    
+    .strength-weak {
+        color: #e74c3c;
+    }
+    
+    .strength-medium {
+        color: #f39c12;
+    }
+    
+    .strength-strong {
+        color: #27ae60;
+    }
+    
+    .madrasa-info {
+        background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+        padding: 20px;
+        border-radius: 8px;
+        margin-bottom: 30px;
+    }
+    
+    .madrasa-info h4 {
+        color: #2c3e50;
+        margin-bottom: 15px;
+    }
+    
+    .madrasa-info ul {
+        padding-left: 20px;
+        margin-bottom: 0;
+    }
+    
+    .madrasa-info li {
+        margin-bottom: 8px;
+        color: #7f8c8d;
+    }
+    
+    @media (max-width: 768px) {
+        .registration-card {
+            padding: 20px;
+            margin: 0 15px;
+        }
+        
+        .registration-header h2 {
+            font-size: 24px;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="registration-container">
+    <div class="registration-card">
+        <div class="registration-header">
+            <h2>Join Taw Haa Zin Nurain Online Madarasa</h2>
+            <p>Create your account to start your Quran learning journey</p>
+        </div>
+        
+        {% if messages %}
+        <div class="mb-4">
+            {% for message in messages %}
+            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+        
+        <div class="madrasa-info">
+            <h4>Why Join Our Madarasa?</h4>
+            <ul>
+                <li>Learn Quran with proper Tajweed from certified teachers</li>
+                <li>Flexible learning schedule that fits your routine</li>
+                <li>Interactive lessons with progress tracking</li>
+                <li>Certificate upon course completion</li>
+                <li>Access to rich Islamic knowledge resources</li>
+            </ul>
+        </div>
+        
+        <form method="POST" novalidate>
+            {% csrf_token %}
+            
+            <!-- User Account Information -->
+            <div class="form-section">
+                <h4>Account Information</h4>
+                
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label for="{{ user_form.username.id_for_label }}">Username *</label>
+                            {{ user_form.username|add_class:"form-control" }}
+                            {% if user_form.username.errors %}
+                            <div class="error-message">{{ user_form.username.errors }}</div>
+                            {% endif %}
+                            {% if user_form.username.help_text %}
+                            <small class="form-text">{{ user_form.username.help_text }}</small>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label for="{{ user_form.email.id_for_label }}">Email Address *</label>
+                            {{ user_form.email|add_class:"form-control" }}
+                            {% if user_form.email.errors %}
+                            <div class="error-message">{{ user_form.email.errors }}</div>
+                            {% endif %}
+                            {% if user_form.email.help_text %}
+                            <small class="form-text">{{ user_form.email.help_text }}</small>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label for="{{ user_form.first_name.id_for_label }}">First Name *</label>
+                            {{ user_form.first_name|add_class:"form-control" }}
+                            {% if user_form.first_name.errors %}
+                            <div class="error-message">{{ user_form.first_name.errors }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label for="{{ user_form.last_name.id_for_label }}">Last Name *</label>
+                            {{ user_form.last_name|add_class:"form-control" }}
+                            {% if user_form.last_name.errors %}
+                            <div class="error-message">{{ user_form.last_name.errors }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Password Section -->
+            <div class="form-section">
+                <h4>Password</h4>
+                
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label for="{{ user_form.password1.id_for_label }}">Password *</label>
+                            {{ user_form.password1|add_class:"form-control" }}
+                            {% if user_form.password1.errors %}
+                            <div class="error-message">{{ user_form.password1.errors }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label for="{{ user_form.password2.id_for_label }}">Confirm Password *</label>
+                            {{ user_form.password2|add_class:"form-control" }}
+                            {% if user_form.password2.errors %}
+                            <div class="error-message">{{ user_form.password2.errors }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Student Profile Information -->
+            <div class="form-section">
+                <h4>Personal Information</h4>
+                
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label for="{{ user_form.phone.id_for_label }}">Phone Number</label>
+                            {{ user_form.phone|add_class:"form-control" }}
+                            {% if user_form.phone.errors %}
+                            <div class="error-message">{{ user_form.phone.errors }}</div>
+                            {% endif %}
+                            {% if user_form.phone.help_text %}
+                            <small class="form-text">{{ user_form.phone.help_text }}</small>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label for="{{ student_form.date_of_birth.id_for_label }}">Date of Birth</label>
+                            {{ student_form.date_of_birth|add_class:"form-control"|attr:"type:date" }}
+                            {% if student_form.date_of_birth.errors %}
+                            <div class="error-message">{{ student_form.date_of_birth.errors }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label for="{{ student_form.gender.id_for_label }}">Gender</label>
+                            {{ student_form.gender|add_class:"form-control" }}
+                            {% if student_form.gender.errors %}
+                            <div class="error-message">{{ student_form.gender.errors }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label for="{{ student_form.country.id_for_label }}">Country</label>
+                            {{ student_form.country|add_class:"form-control" }}
+                            {% if student_form.country.errors %}
+                            <div class="error-message">{{ student_form.country.errors }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label for="{{ student_form.occupation.id_for_label }}">Occupation</label>
+                            {{ student_form.occupation|add_class:"form-control" }}
+                            {% if student_form.occupation.errors %}
+                            <div class="error-message">{{ student_form.occupation.errors }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label for="{{ student_form.education_level.id_for_label }}">Education Level</label>
+                            {{ student_form.education_level|add_class:"form-control" }}
+                            {% if student_form.education_level.errors %}
+                            <div class="error-message">{{ student_form.education_level.errors }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="{{ student_form.about_me.id_for_label }}">About Me</label>
+                    {{ student_form.about_me|add_class:"form-control"|attr:"rows:3"|attr:"placeholder:Tell us about your Quran learning goals and background..." }}
+                    {% if student_form.about_me.errors %}
+                    <div class="error-message">{{ student_form.about_me.errors }}</div>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <!-- Terms and Conditions -->
+            <div class="form-group form-check mb-4">
+                <input type="checkbox" class="form-check-input" id="terms" required>
+                <label class="form-check-label" for="terms">
+                    I agree to the <a href="#" target="_blank">Terms and Conditions</a> and 
+                    <a href="#" target="_blank">Privacy Policy</a> of Taw Haa Zin Nurain Online Madarasa
+                </label>
+                <div class="invalid-feedback">
+                    You must agree to the terms and conditions
+                </div>
+            </div>
+            
+            <!-- Submit Button -->
+            <button type="submit" class="btn-register">Create Account</button>
+        </form>
+        
+        <div class="login-link">
+            <p>Already have an account? <a href="{% url 'core:login' %}">Login here</a></p>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Password strength indicator
+        const passwordInput = document.getElementById('{{ user_form.password1.id_for_label }}');
+        const strengthIndicator = document.createElement('div');
+        strengthIndicator.className = 'password-strength';
+        passwordInput.parentNode.appendChild(strengthIndicator);
+        
+        passwordInput.addEventListener('input', function() {
+            const password = this.value;
+            let strength = '';
+            let strengthClass = '';
+            
+            if (password.length === 0) {
+                strength = '';
+            } else if (password.length < 6) {
+                strength = 'Weak';
+                strengthClass = 'strength-weak';
+            } else if (password.length < 10) {
+                strength = 'Medium';
+                strengthClass = 'strength-medium';
+            } else {
+                // Check for complexity
+                const hasUpperCase = /[A-Z]/.test(password);
+                const hasLowerCase = /[a-z]/.test(password);
+                const hasNumbers = /\d/.test(password);
+                const hasSpecial = /[!@#$%^&*(),.?":{}|<>]/.test(password);
+                
+                const complexity = [hasUpperCase, hasLowerCase, hasNumbers, hasSpecial].filter(Boolean).length;
+                
+                if (complexity >= 3) {
+                    strength = 'Strong';
+                    strengthClass = 'strength-strong';
+                } else if (complexity >= 2) {
+                    strength = 'Medium';
+                    strengthClass = 'strength-medium';
+                } else {
+                    strength = 'Weak';
+                    strengthClass = 'strength-weak';
+                }
+            }
+            
+            if (strength) {
+                strengthIndicator.innerHTML = `Password strength: <span class="${strengthClass}">${strength}</span>`;
+            } else {
+                strengthIndicator.innerHTML = '';
+            }
+        });
+        
+        // Form validation
+        const form = document.querySelector('form');
+        form.addEventListener('submit', function(event) {
+            if (!form.checkValidity()) {
+                event.preventDefault();
+                event.stopPropagation();
+            }
+            form.classList.add('was-validated');
+        }, false);
+        
+        // Real-time email validation
+        const emailInput = document.getElementById('{{ user_form.email.id_for_label }}');
+        emailInput.addEventListener('blur', function() {
+            const email = this.value;
+            if (email) {
+                const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                if (!emailRegex.test(email)) {
+                    this.setCustomValidity('Please enter a valid email address');
+                } else {
+                    this.setCustomValidity('');
+                }
+            }
+        });
+        
+        // Phone number formatting
+        const phoneInput = document.getElementById('{{ user_form.phone.id_for_label }}');
+        phoneInput.addEventListener('input', function() {
+            let phone = this.value.replace(/\D/g, '');
+            if (phone.length > 0) {
+                phone = '+' + phone;
+                if (phone.length > 4) {
+                    phone = phone.substring(0, 4) + ' ' + phone.substring(4);
+                }
+                if (phone.length > 9) {
+                    phone = phone.substring(0, 9) + ' ' + phone.substring(9);
+                }
+                if (phone.length > 14) {
+                    phone = phone.substring(0, 14);
+                }
+            }
+            this.value = phone;
+        });
+        
+        // Terms checkbox validation
+        const termsCheckbox = document.getElementById('terms');
+        termsCheckbox.addEventListener('change', function() {
+            if (!this.checked) {
+                this.setCustomValidity('You must agree to the terms and conditions');
+            } else {
+                this.setCustomValidity('');
+            }
+        });
+    });
+</script>
+{% endblock %}

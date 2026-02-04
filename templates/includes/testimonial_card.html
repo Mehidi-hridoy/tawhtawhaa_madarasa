@@ -1,0 +1,51 @@
+<!-- templates/includes/testimonial_card.html -->
+<div class="card testimonial-card h-100 border-0 shadow-sm">
+    <div class="card-body p-4">
+        <!-- Rating -->
+        <div class="rating mb-3">
+            {% for i in "12345" %}
+            {% if forloop.counter <= testimonial.rating %}
+            <i class="fas fa-star text-warning"></i>
+            {% else %}
+            <i class="far fa-star text-muted"></i>
+            {% endif %}
+            {% endfor %}
+        </div>
+        
+        <!-- Review Text -->
+        <p class="card-text mb-4 fst-italic">
+            "{{ testimonial.content|truncatechars:200 }}"
+        </p>
+        
+        <!-- Reviewer Info -->
+        <div class="d-flex align-items-center">
+            <!-- Avatar -->
+            <div class="me-3">
+                {% if testimonial.student.profile_picture %}
+                <img src="{{ testimonial.student.profile_picture.url }}" 
+                     class="rounded-circle border border-2 border-primary"
+                     width="50" height="50" 
+                     alt="{{ testimonial.student.full_name }}">
+                {% else %}
+                <div class="rounded-circle border border-2 border-primary d-flex align-items-center justify-content-center"
+                     style="width: 50px; height: 50px; background: linear-gradient(135deg, #3498db, #2c3e50);">
+                    <span class="text-white fw-bold">
+                        {{ testimonial.student.full_name|first|upper }}
+                    </span>
+                </div>
+                {% endif %}
+            </div>
+            
+            <!-- Details -->
+            <div>
+                <h6 class="mb-0">{{ testimonial.student.full_name }}</h6>
+                <small class="text-muted">{{ testimonial.course.name }}</small>
+                <div class="mt-1">
+                    <small class="text-muted">
+                        {{ testimonial.created_at|date:"M d, Y" }}
+                    </small>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

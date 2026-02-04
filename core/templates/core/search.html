@@ -1,0 +1,668 @@
+<!-- templates/core/search.html -->
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ page_title }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-5 mt-5">
+    <div class="container">
+        <!-- Page Header -->
+        <div class="row mb-5">
+            <div class="col-12">
+                <nav aria-label="breadcrumb">
+                    <ol class="breadcrumb bg-transparent p-0 mb-2">
+                        <li class="breadcrumb-item"><a href="{% url 'core:home' %}">Home</a></li>
+                        <li class="breadcrumb-item active" aria-current="page">Search</li>
+                    </ol>
+                </nav>
+                
+                <h1 class="display-5 fw-bold mb-3">Search Results</h1>
+                
+                <!-- Search Form -->
+                <div class="row mb-4">
+                    <div class="col-lg-8">
+                        <form method="GET" action="{% url 'core:search' %}" class="search-form">
+                            <div class="input-group shadow-sm rounded-pill overflow-hidden">
+                                <input type="text" 
+                                       name="q" 
+                                       value="{{ query }}"
+                                       class="form-control border-0 ps-4" 
+                                       placeholder="Search courses, articles, instructors..."
+                                       aria-label="Search"
+                                       autofocus>
+                                <button class="btn btn-primary px-4" type="submit">
+                                    <i class="fas fa-search"></i>
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                    <div class="col-lg-4 mt-3 mt-lg-0">
+                        <!-- Search Type Filter -->
+                        <div class="d-flex justify-content-lg-end">
+                            <div class="btn-group" role="group">
+                                <a href="?q={{ query }}&type=all" 
+                                   class="btn btn-outline-primary {% if search_type == 'all' %}active{% endif %}">
+                                    All
+                                </a>
+                                <a href="?q={{ query }}&type=courses" 
+                                   class="btn btn-outline-primary {% if search_type == 'courses' %}active{% endif %}">
+                                    Courses
+                                </a>
+                                <a href="?q={{ query }}&type=blog" 
+                                   class="btn btn-outline-primary {% if search_type == 'blog' %}active{% endif %}">
+                                    Articles
+                                </a>
+                                <a href="?q={{ query }}&type=instructors" 
+                                   class="btn btn-outline-primary {% if search_type == 'instructors' %}active{% endif %}">
+                                    Instructors
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Results Summary -->
+                {% if query %}
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle me-2"></i>
+                    Found <strong>{{ results.total_results }}</strong> results for "<strong>{{ query }}</strong>"
+                    {% if search_type != 'all' %}
+                    in {{ search_type|title }}
+                    {% endif %}
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="row">
+            <!-- Left Sidebar -->
+            <div class="col-lg-3 mb-5 mb-lg-0">
+                <div class="card border-0 shadow-sm sticky-top" style="top: 20px;">
+                    <div class="card-body p-4">
+                        <h5 class="card-title mb-4">
+                            <i class="fas fa-filter me-2 text-primary"></i> Filter Results
+                        </h5>
+                        
+                        <!-- Search Tips -->
+                        <div class="mb-4">
+                            <h6 class="fw-bold mb-3">Search Tips</h6>
+                            <ul class="small text-muted mb-0">
+                                <li class="mb-2">Try different keywords</li>
+                                <li class="mb-2">Check your spelling</li>
+                                <li class="mb-2">Use specific terms</li>
+                                <li>Browse by category</li>
+                            </ul>
+                        </div>
+                        
+                        <!-- Categories -->
+                        {% if categories %}
+                        <div class="mb-4">
+                            <h6 class="fw-bold mb-3">Browse Categories</h6>
+                            <div class="list-group list-group-flush">
+                                {% for category in categories %}
+                                <a href="{% url 'core:course_list' %}?category={{ category.slug }}" 
+                                   class="list-group-item list-group-item-action border-0 py-2 px-0">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <span>{{ category.name }}</span>
+                                        <span class="badge bg-light text-dark">{{ category.course_count }}</span>
+                                    </div>
+                                </a>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        {% endif %}
+                        
+                        <!-- Recent Searches (Placeholder) -->
+                        <div>
+                            <h6 class="fw-bold mb-3">Recent Searches</h6>
+                            <div class="d-flex flex-wrap gap-2">
+                                <a href="?q=Quran" class="badge bg-light text-dark text-decoration-none">Quran</a>
+                                <a href="?q=Hadith" class="badge bg-light text-dark text-decoration-none">Hadith</a>
+                                <a href="?q=Arabic" class="badge bg-light text-dark text-decoration-none">Arabic</a>
+                                <a href="?q=Fiqh" class="badge bg-light text-dark text-decoration-none">Fiqh</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Main Results -->
+            <div class="col-lg-9">
+                {% if query %}
+                    <!-- Courses Results -->
+                    {% if search_type in 'all,courses' and results.courses %}
+                    <div class="mb-5">
+                        <div class="d-flex justify-content-between align-items-center mb-4">
+                            <h3 class="fw-bold">
+                                <i class="fas fa-book text-primary me-2"></i>
+                                Courses ({{ results.courses|length }})
+                            </h3>
+                            <a href="?q={{ query }}&type=courses" class="btn btn-sm btn-outline-primary">
+                                View All Courses
+                            </a>
+                        </div>
+                        
+                        <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
+                            {% for course in results.courses_page %}
+                            <div class="col">
+                                {% include 'includes/course_card.html' with course=course %}
+                            </div>
+                            {% endfor %}
+                        </div>
+                        
+                        <!-- Courses Pagination -->
+                        {% if results.courses_page.has_other_pages %}
+                        <nav aria-label="Courses pagination" class="mt-4">
+                            <ul class="pagination justify-content-center">
+                                {% if results.courses_page.has_previous %}
+                                <li class="page-item">
+                                    <a class="page-link" 
+                                       href="?q={{ query }}&type={{ search_type }}&courses_page={{ results.courses_page.previous_page_number }}">
+                                        Previous
+                                    </a>
+                                </li>
+                                {% endif %}
+                                
+                                {% for num in results.courses_page.paginator.page_range %}
+                                    {% if results.courses_page.number == num %}
+                                    <li class="page-item active">
+                                        <span class="page-link">{{ num }}</span>
+                                    </li>
+                                    {% elif num > results.courses_page.number|add:'-3' and num < results.courses_page.number|add:'3' %}
+                                    <li class="page-item">
+                                        <a class="page-link" 
+                                           href="?q={{ query }}&type={{ search_type }}&courses_page={{ num }}">
+                                            {{ num }}
+                                        </a>
+                                    </li>
+                                    {% endif %}
+                                {% endfor %}
+                                
+                                {% if results.courses_page.has_next %}
+                                <li class="page-item">
+                                    <a class="page-link" 
+                                       href="?q={{ query }}&type={{ search_type }}&courses_page={{ results.courses_page.next_page_number }}">
+                                        Next
+                                    </a>
+                                </li>
+                                {% endif %}
+                            </ul>
+                        </nav>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+                    
+                    <!-- Blog Posts Results -->
+                    {% if search_type in 'all,blog' and results.blog_posts %}
+                    <div class="mb-5">
+                        <div class="d-flex justify-content-between align-items-center mb-4">
+                            <h3 class="fw-bold">
+                                <i class="fas fa-newspaper text-success me-2"></i>
+                                Articles ({{ results.blog_posts|length }})
+                            </h3>
+                            <a href="?q={{ query }}&type=blog" class="btn btn-sm btn-outline-primary">
+                                View All Articles
+                            </a>
+                        </div>
+                        
+                        <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
+                            {% for post in results.blog_posts_page %}
+                            <div class="col">
+                                <div class="card blog-card h-100 border-0 shadow-sm">
+                                    {% if post.featured_image %}
+                                    <img src="{{ post.featured_image.url }}" 
+                                         class="card-img-top" 
+                                         alt="{{ post.title }}"
+                                         style="height: 200px; object-fit: cover;">
+                                    {% else %}
+                                    <div class="card-img-top bg-secondary d-flex align-items-center justify-content-center" 
+                                         style="height: 200px;">
+                                        <i class="fas fa-newspaper fa-3x text-white opacity-50"></i>
+                                    </div>
+                                    {% endif %}
+                                    
+                                    <div class="card-body">
+                                        <span class="badge bg-primary bg-opacity-10 text-primary mb-2">
+                                            {{ post.get_category_display }}
+                                        </span>
+                                        <h5 class="card-title">
+                                            <a href="{% url 'core:blog_detail' post.slug %}" class="text-decoration-none text-dark">
+                                                {{ post.title|truncatechars:70 }}
+                                            </a>
+                                        </h5>
+                                        <p class="card-text text-muted">
+                                            {{ post.excerpt|truncatechars:150 }}
+                                        </p>
+                                        
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <small class="text-muted">
+                                                {{ post.published_at|date:"M d, Y" }}
+                                            </small>
+                                            <a href="{% url 'core:blog_detail' post.slug %}" class="btn btn-sm btn-outline-primary">
+                                                Read
+                                            </a>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        
+                        <!-- Blog Pagination -->
+                        {% if results.blog_posts_page.has_other_pages %}
+                        <nav aria-label="Blog pagination" class="mt-4">
+                            <ul class="pagination justify-content-center">
+                                {% if results.blog_posts_page.has_previous %}
+                                <li class="page-item">
+                                    <a class="page-link" 
+                                       href="?q={{ query }}&type={{ search_type }}&blog_page={{ results.blog_posts_page.previous_page_number }}">
+                                        Previous
+                                    </a>
+                                </li>
+                                {% endif %}
+                                
+                                {% for num in results.blog_posts_page.paginator.page_range %}
+                                    {% if results.blog_posts_page.number == num %}
+                                    <li class="page-item active">
+                                        <span class="page-link">{{ num }}</span>
+                                    </li>
+                                    {% elif num > results.blog_posts_page.number|add:'-3' and num < results.blog_posts_page.number|add:'3' %}
+                                    <li class="page-item">
+                                        <a class="page-link" 
+                                           href="?q={{ query }}&type={{ search_type }}&blog_page={{ num }}">
+                                            {{ num }}
+                                        </a>
+                                    </li>
+                                    {% endif %}
+                                {% endfor %}
+                                
+                                {% if results.blog_posts_page.has_next %}
+                                <li class="page-item">
+                                    <a class="page-link" 
+                                       href="?q={{ query }}&type={{ search_type }}&blog_page={{ results.blog_posts_page.next_page_number }}">
+                                        Next
+                                    </a>
+                                </li>
+                                {% endif %}
+                            </ul>
+                        </nav>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+                    
+                    <!-- Instructors Results -->
+                    {% if search_type in 'all,instructors' and results.instructors %}
+                    <div class="mb-5">
+                        <div class="d-flex justify-content-between align-items-center mb-4">
+                            <h3 class="fw-bold">
+                                <i class="fas fa-chalkboard-teacher text-warning me-2"></i>
+                                Instructors ({{ results.instructors|length }})
+                            </h3>
+                            <a href="?q={{ query }}&type=instructors" class="btn btn-sm btn-outline-primary">
+                                View All Instructors
+                            </a>
+                        </div>
+                        
+                        <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
+                            {% for instructor in results.instructors_page %}
+                            <div class="col">
+                                <div class="card instructor-card h-100 border-0 shadow-sm">
+                                    <div class="card-body p-4">
+                                        <div class="text-center mb-3">
+                                            {% if instructor.profile_picture %}
+                                            <img src="{{ instructor.profile_picture.url }}" 
+                                                 class="rounded-circle mb-3"
+                                                 width="100" height="100"
+                                                 alt="{{ instructor.full_name }}">
+                                            {% else %}
+                                            <div class="rounded-circle bg-gradient-primary d-flex align-items-center justify-content-center mx-auto mb-3"
+                                                 style="width: 100px; height: 100px;">
+                                                <span class="text-white h4">
+                                                    {{ instructor.full_name|first|upper }}
+                                                </span>
+                                            </div>
+                                            {% endif %}
+                                            <h5 class="fw-bold mb-1">{{ instructor.full_name }}</h5>
+                                            <p class="text-primary mb-2">{{ instructor.get_role_display }}</p>
+                                        </div>
+                                        
+                                        <p class="text-muted small mb-3">
+                                            {{ instructor.bio|truncatechars:120 }}
+                                        </p>
+                                        
+                                        <div class="mb-3">
+                                            <h6 class="small fw-bold mb-2">Specialization</h6>
+                                            <p class="text-muted small">{{ instructor.specialization|truncatechars:50 }}</p>
+                                        </div>
+                                        
+                                        <div class="d-grid">
+                                            <a href="#" class="btn btn-outline-primary btn-sm">
+                                                View Profile
+                                            </a>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        
+                        <!-- Instructors Pagination -->
+                        {% if results.instructors_page.has_other_pages %}
+                        <nav aria-label="Instructors pagination" class="mt-4">
+                            <ul class="pagination justify-content-center">
+                                {% if results.instructors_page.has_previous %}
+                                <li class="page-item">
+                                    <a class="page-link" 
+                                       href="?q={{ query }}&type={{ search_type }}&instructors_page={{ results.instructors_page.previous_page_number }}">
+                                        Previous
+                                    </a>
+                                </li>
+                                {% endif %}
+                                
+                                {% for num in results.instructors_page.paginator.page_range %}
+                                    {% if results.instructors_page.number == num %}
+                                    <li class="page-item active">
+                                        <span class="page-link">{{ num }}</span>
+                                    </li>
+                                    {% elif num > results.instructors_page.number|add:'-3' and num < results.instructors_page.number|add:'3' %}
+                                    <li class="page-item">
+                                        <a class="page-link" 
+                                           href="?q={{ query }}&type={{ search_type }}&instructors_page={{ num }}">
+                                            {{ num }}
+                                        </a>
+                                    </li>
+                                    {% endif %}
+                                {% endfor %}
+                                
+                                {% if results.instructors_page.has_next %}
+                                <li class="page-item">
+                                    <a class="page-link" 
+                                       href="?q={{ query }}&type={{ search_type }}&instructors_page={{ results.instructors_page.next_page_number }}">
+                                        Next
+                                    </a>
+                                </li>
+                                {% endif %}
+                            </ul>
+                        </nav>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+                    
+                    <!-- No Results -->
+                    {% if results.total_results == 0 %}
+                    <div class="text-center py-5 my-5">
+                        <div class="mb-4">
+                            <i class="fas fa-search fa-4x text-muted"></i>
+                        </div>
+                        <h3 class="mb-3">No results found</h3>
+                        <p class="text-muted mb-4">
+                            We couldn't find any results for "<strong>{{ query }}</strong>".<br>
+                            Try different keywords or check your spelling.
+                        </p>
+                        <div class="d-flex justify-content-center gap-3">
+                            <a href="{% url 'core:course_list' %}" class="btn btn-primary">
+                                <i class="fas fa-book me-2"></i>Browse Courses
+                            </a>
+                            <a href="{% url 'core:blog_list' %}" class="btn btn-outline-primary">
+                                <i class="fas fa-newspaper me-2"></i>Browse Articles
+                            </a>
+                        </div>
+                    </div>
+                    {% endif %}
+                
+                {% else %}
+                <!-- Empty Search State -->
+                <div class="text-center py-5 my-5">
+                    <div class="mb-4">
+                        <i class="fas fa-search fa-4x text-muted"></i>
+                    </div>
+                    <h3 class="mb-3">What would you like to learn?</h3>
+                    <p class="text-muted mb-4">
+                        Search for courses, articles, or instructors to begin your Islamic learning journey.
+                    </p>
+                    
+                    <!-- Popular Searches -->
+                    <div class="mb-5">
+                        <h5 class="fw-bold mb-3">Popular Searches</h5>
+                        <div class="d-flex flex-wrap justify-content-center gap-2">
+                            <a href="?q=Quran" class="btn btn-outline-primary">Quran Recitation</a>
+                            <a href="?q=Tajweed" class="btn btn-outline-primary">Tajweed Rules</a>
+                            <a href="?q=Hadith" class="btn btn-outline-primary">Hadith Studies</a>
+                            <a href="?q=Fiqh" class="btn btn-outline-primary">Islamic Fiqh</a>
+                            <a href="?q=Arabic" class="btn btn-outline-primary">Arabic Language</a>
+                            <a href="?q=Seerah" class="btn btn-outline-primary">Prophet's Seerah</a>
+                            <a href="?q=Tafsir" class="btn btn-outline-primary">Quran Tafsir</a>
+                            <a href="?q=Aqida" class="btn btn-outline-primary">Islamic Aqida</a>
+                        </div>
+                    </div>
+                    
+                    <!-- Quick Categories -->
+                    <div>
+                        <h5 class="fw-bold mb-3">Browse by Category</h5>
+                        <div class="row row-cols-2 row-cols-md-4 g-3">
+                            {% for category in categories|slice:":8" %}
+                            <div class="col">
+                                <a href="{% url 'core:course_list' %}?category={{ category.slug }}" 
+                                   class="category-card text-decoration-none">
+                                    <div class="card h-100 border-0 shadow-sm hover-shadow">
+                                        <div class="card-body text-center p-3">
+                                            <div class="category-icon mb-2">
+                                                <i class="{{ category.icon_class }} fa-2x" style="color: {{ category.color }}"></i>
+                                            </div>
+                                            <h6 class="card-title mb-0">{{ category.name }}</h6>
+                                            <small class="text-muted">{{ category.course_count }} courses</small>
+                                        </div>
+                                    </div>
+                                </a>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Search Form */
+    .search-form .input-group {
+        max-width: 100%;
+    }
+    
+    .search-form .form-control {
+        height: 50px;
+    }
+    
+    .search-form .btn {
+        height: 50px;
+    }
+    
+    /* Search Type Buttons */
+    .btn-group .btn {
+        border-radius: 8px !important;
+        margin: 0 2px;
+    }
+    
+    .btn-group .btn.active {
+        background-color: #3498db;
+        color: white;
+    }
+    
+    /* Category Cards */
+    .category-card:hover {
+        transform: translateY(-5px);
+        transition: transform 0.3s ease;
+    }
+    
+    .hover-shadow:hover {
+        box-shadow: 0 10px 30px rgba(0,0,0,0.1) !important;
+    }
+    
+    /* Instructor Cards */
+    .instructor-card {
+        transition: all 0.3s ease;
+    }
+    
+    .instructor-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 30px rgba(0,0,0,0.1) !important;
+    }
+    
+    /* Blog Cards */
+    .blog-card {
+        transition: all 0.3s ease;
+    }
+    
+    .blog-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 30px rgba(0,0,0,0.1) !important;
+    }
+    
+    /* Sticky Sidebar */
+    .sticky-top {
+        z-index: 1;
+    }
+    
+    /* Popular Searches */
+    .popular-searches .btn {
+        border-radius: 20px;
+        padding: 0.5rem 1.5rem;
+    }
+    
+    /* Responsive */
+    @media (max-width: 768px) {
+        .search-form .input-group {
+            margin-bottom: 1rem;
+        }
+        
+        .btn-group {
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        
+        .btn-group .btn {
+            margin-bottom: 0.5rem;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    $(document).ready(function() {
+        // Auto-focus search input
+        $('input[name="q"]').focus();
+        
+        // Search type active state
+        $('.btn-group .btn').click(function() {
+            $('.btn-group .btn').removeClass('active');
+            $(this).addClass('active');
+        });
+        
+        // Popular search buttons
+        $('.popular-searches .btn').click(function(e) {
+            e.preventDefault();
+            const searchTerm = $(this).text();
+            $('input[name="q"]').val(searchTerm);
+            $('form.search-form').submit();
+        });
+        
+        // Category cards hover effect
+        $('.category-card').hover(
+            function() {
+                $(this).find('.card').css('transform', 'translateY(-5px)');
+            },
+            function() {
+                $(this).find('.card').css('transform', 'translateY(0)');
+            }
+        );
+        
+        // Clear search button
+        function addClearButton() {
+            const searchInput = $('input[name="q"]');
+            if (searchInput.val().trim() !== '') {
+                if (!$('.clear-search').length) {
+                    const clearBtn = $('<span class="clear-search position-absolute end-0 top-50 translate-middle-y me-4" style="cursor: pointer; right: 60px !important;"><i class="fas fa-times text-muted"></i></span>');
+                    searchInput.parent().append(clearBtn);
+                    
+                    clearBtn.click(function() {
+                        searchInput.val('');
+                        $(this).remove();
+                        searchInput.focus();
+                    });
+                }
+            } else {
+                $('.clear-search').remove();
+            }
+        }
+        
+        // Initialize clear button
+        addClearButton();
+        
+        // Update clear button on input
+        $('input[name="q"]').on('input', function() {
+            addClearButton();
+        });
+        
+        // Keyboard shortcuts
+        $(document).keydown(function(e) {
+            // Focus search on Ctrl+K or Cmd+K
+            if ((e.ctrlKey || e.metaKey) && e.keyCode === 75) {
+                e.preventDefault();
+                $('input[name="q"]').focus();
+            }
+            
+            // Submit on Enter when search is focused
+            if (e.keyCode === 13 && $('input[name="q"]').is(':focus')) {
+                $('form.search-form').submit();
+            }
+            
+            // Clear on Escape when search is focused
+            if (e.keyCode === 27 && $('input[name="q"]').is(':focus')) {
+                $('input[name="q"]').val('');
+                $('.clear-search').remove();
+            }
+        });
+        
+        // Search suggestions (placeholder)
+        function showSearchSuggestions() {
+            // This would typically make an AJAX call to get suggestions
+            const suggestions = ['Quran', 'Hadith', 'Arabic', 'Fiqh', 'Tajweed', 'Seerah', 'Tafsir', 'Aqida'];
+            
+            if (!$('#searchSuggestions').length) {
+                const suggestionsHtml = `
+                    <div id="searchSuggestions" class="position-absolute w-100 bg-white border rounded shadow-sm mt-1" style="z-index: 1000; display: none;">
+                        <div class="list-group list-group-flush">
+                            ${suggestions.map(s => `
+                                <a href="?q=${s}" class="list-group-item list-group-item-action">
+                                    <i class="fas fa-search me-2 text-muted"></i> ${s}
+                                </a>
+                            `).join('')}
+                        </div>
+                    </div>
+                `;
+                $('input[name="q"]').parent().append(suggestionsHtml);
+            }
+        }
+        
+        // Toggle suggestions
+        $('input[name="q"]').on('focus', function() {
+            $('#searchSuggestions').show();
+        });
+        
+        $('input[name="q"]').on('blur', function() {
+            setTimeout(() => {
+                $('#searchSuggestions').hide();
+            }, 200);
+        });
+        
+        // Initialize suggestions
+        showSearchSuggestions();
+    });
+</script>
+{% endblock %}

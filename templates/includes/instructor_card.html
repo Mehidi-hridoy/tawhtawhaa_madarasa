@@ -1,0 +1,58 @@
+<!-- templates/includes/instructor_card.html -->
+<div class="card instructor-card h-100 border-0 shadow-sm">
+    <!-- Instructor Image -->
+    <div class="position-relative" style="height: 200px;">
+        {% if instructor.profile_picture %}
+        <img src="{{ instructor.profile_picture.url }}" 
+             class="card-img-top h-100 w-100 object-fit-cover" 
+             alt="{{ instructor.full_name }}">
+        {% else %}
+        <div class="h-100 bg-gradient-primary d-flex align-items-center justify-content-center">
+            <i class="fas fa-user-graduate fa-3x text-white opacity-75"></i>
+        </div>
+        {% endif %}
+        
+        <!-- Role Badge -->
+        <div class="position-absolute bottom-0 start-0 p-2">
+            <span class="badge bg-{{ instructor.role|default:'primary' }}">
+                {{ instructor.get_role_display }}
+            </span>
+        </div>
+    </div>
+    
+    <div class="card-body p-4">
+        <!-- Name & Title -->
+        <h5 class="card-title mb-1">{{ instructor.full_name }}</h5>
+        <p class="text-muted small mb-3">{{ instructor.specialization|truncatechars:60 }}</p>
+        
+        <!-- Experience -->
+        <div class="d-flex align-items-center mb-3">
+            <i class="fas fa-briefcase text-primary me-2"></i>
+            <small>{{ instructor.experience_years }} Years Experience</small>
+        </div>
+        
+        <!-- Courses Count -->
+        <div class="d-flex align-items-center mb-4">
+            <i class="fas fa-book text-success me-2"></i>
+            <small>{{ instructor.course_count|default:"0" }} Courses</small>
+        </div>
+        
+        <!-- Bio Excerpt -->
+        <p class="card-text text-muted small mb-4">
+            {{ instructor.bio|truncatechars:120 }}
+        </p>
+        
+        <!-- Qualifications -->
+        <div class="mb-4">
+            <h6 class="small fw-bold mb-2">Qualifications:</h6>
+            <p class="text-muted small mb-0">
+                {{ instructor.qualifications|truncatechars:100 }}
+            </p>
+        </div>
+        
+        <!-- View Profile Button -->
+        <a href="#" class="btn btn-outline-primary w-100">
+            <i class="fas fa-user-circle me-2"></i> View Profile
+        </a>
+    </div>
+</div>

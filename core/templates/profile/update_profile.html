@@ -1,0 +1,516 @@
+<!-- templates/profile/update_profile.html -->
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ page_title }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-5 mt-5">
+    <div class="container">
+        <!-- Page Header -->
+        <div class="row mb-5">
+            <div class="col-12">
+                <nav aria-label="breadcrumb">
+                    <ol class="breadcrumb bg-transparent p-0 mb-2">
+                        <li class="breadcrumb-item"><a href="{% url 'core:home' %}">Home</a></li>
+                        <li class="breadcrumb-item"><a href="{% url 'core:profile' %}">Profile</a></li>
+                        <li class="breadcrumb-item active" aria-current="page">Edit Profile</li>
+                    </ol>
+                </nav>
+                <h1 class="h2 fw-bold mb-3">Update Your Profile</h1>
+                <p class="text-muted">Keep your information up to date to get the best learning experience.</p>
+            </div>
+        </div>
+
+        <div class="row">
+            <!-- Left Sidebar -->
+            <div class="col-lg-4 mb-5 mb-lg-0">
+                {% include 'profile/partials/profile_sidebar.html' %}
+            </div>
+
+            <!-- Update Form -->
+            <div class="col-lg-8">
+                <form method="POST" enctype="multipart/form-data" novalidate>
+                    {% csrf_token %}
+                    
+                    <!-- Messages -->
+                    {% if messages %}
+                    <div class="messages mb-4">
+                        {% for message in messages %}
+                        <div class="alert alert-{{ message.tags }} alert-dismissible fade show">
+                            {{ message }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                    
+                    <!-- Profile Photo Section -->
+                    <div class="card border-0 shadow-sm mb-4">
+                        <div class="card-body p-4">
+                            <h5 class="card-title mb-4">
+                                <i class="fas fa-camera text-primary me-2"></i>Profile Picture
+                            </h5>
+                            
+                            <div class="row align-items-center">
+                                <div class="col-auto">
+                                    <div class="avatar-upload">
+                                        {% if student.profile_picture %}
+                                        <img src="{{ student.profile_picture.url }}" 
+                                             id="profilePreview" 
+                                             class="rounded-circle border"
+                                             style="width: 120px; height: 120px; object-fit: cover;"
+                                             alt="Current Profile Picture">
+                                        {% else %}
+                                        <div id="profilePreview" 
+                                             class="rounded-circle border d-flex align-items-center justify-content-center"
+                                             style="width: 120px; height: 120px; background: linear-gradient(135deg, #3498db, #2c3e50); color: white; font-size: 2rem;">
+                                            {{ student.full_name|first|upper }}
+                                        </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                <div class="col">
+                                    <div class="mb-3">
+                                        <label for="id_profile_picture" class="form-label">Upload New Picture</label>
+                                        {{ profile_form.profile_picture }}
+                                        <div class="form-text">
+                                            Recommended: Square image, max 2MB. JPG, PNG, or GIF.
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Personal Information -->
+                    <div class="card border-0 shadow-sm mb-4">
+                        <div class="card-body p-4">
+                            <h5 class="card-title mb-4">
+                                <i class="fas fa-user text-primary me-2"></i>Personal Information
+                            </h5>
+                            
+                            <div class="row">
+                                <!-- User Form Fields -->
+                                <div class="col-md-6 mb-3">
+                                    <label for="id_first_name" class="form-label">
+                                        First Name <span class="text-danger">*</span>
+                                    </label>
+                                    {{ user_form.first_name }}
+                                    {% if user_form.first_name.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {{ user_form.first_name.errors.0 }}
+                                    </div>
+                                    {% endif %}
+                                </div>
+                                
+                                <div class="col-md-6 mb-3">
+                                    <label for="id_last_name" class="form-label">
+                                        Last Name <span class="text-danger">*</span>
+                                    </label>
+                                    {{ user_form.last_name }}
+                                    {% if user_form.last_name.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {{ user_form.last_name.errors.0 }}
+                                    </div>
+                                    {% endif %}
+                                </div>
+                                
+                                <div class="col-md-6 mb-3">
+                                    <label for="id_email" class="form-label">
+                                        Email Address <span class="text-danger">*</span>
+                                    </label>
+                                    {{ user_form.email }}
+                                    {% if user_form.email.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {{ user_form.email.errors.0 }}
+                                    </div>
+                                    {% endif %}
+                                    <div class="form-text">
+                                        We'll send important notifications to this email.
+                                    </div>
+                                </div>
+                                
+                                <!-- Student Form Fields -->
+                                <div class="col-md-6 mb-3">
+                                    <label for="id_full_name" class="form-label">
+                                        Display Name <span class="text-danger">*</span>
+                                    </label>
+                                    {{ profile_form.full_name }}
+                                    {% if profile_form.full_name.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {{ profile_form.full_name.errors.0 }}
+                                    </div>
+                                    {% endif %}
+                                    <div class="form-text">
+                                        This name will be shown on certificates and in classes.
+                                    </div>
+                                </div>
+                                
+                                <div class="col-md-6 mb-3">
+                                    <label for="id_phone" class="form-label">
+                                        Phone Number
+                                    </label>
+                                    {{ profile_form.phone }}
+                                    {% if profile_form.phone.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {{ profile_form.phone.errors.0 }}
+                                    </div>
+                                    {% endif %}
+                                    <div class="form-text">
+                                        Format: +8801XXXXXXXXX
+                                    </div>
+                                </div>
+                                
+                                <div class="col-md-6 mb-3">
+                                    <label for="id_date_of_birth" class="form-label">Date of Birth</label>
+                                    {{ profile_form.date_of_birth }}
+                                    {% if profile_form.date_of_birth.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {{ profile_form.date_of_birth.errors.0 }}
+                                    </div>
+                                    {% endif %}
+                                    <div class="form-text">
+                                        Optional. Must be at least 10 years old.
+                                    </div>
+                                </div>
+                                
+                                <div class="col-md-6 mb-3">
+                                    <label for="id_gender" class="form-label">Gender</label>
+                                    {{ profile_form.gender }}
+                                    {% if profile_form.gender.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {{ profile_form.gender.errors.0 }}
+                                    </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Additional Information -->
+                    <div class="card border-0 shadow-sm mb-4">
+                        <div class="card-body p-4">
+                            <h5 class="card-title mb-4">
+                                <i class="fas fa-info-circle text-primary me-2"></i>Additional Information
+                            </h5>
+                            
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="id_occupation" class="form-label">Occupation</label>
+                                    {{ profile_form.occupation }}
+                                    {% if profile_form.occupation.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {{ profile_form.occupation.errors.0 }}
+                                    </div>
+                                    {% endif %}
+                                </div>
+                                
+                                <div class="col-md-6 mb-3">
+                                    <label for="id_education_level" class="form-label">Education Level</label>
+                                    {{ profile_form.education_level }}
+                                    {% if profile_form.education_level.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {{ profile_form.education_level.errors.0 }}
+                                    </div>
+                                    {% endif %}
+                                </div>
+                                
+                                <div class="col-md-6 mb-3">
+                                    <label for="id_city" class="form-label">City</label>
+                                    {{ profile_form.city }}
+                                    {% if profile_form.city.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {{ profile_form.city.errors.0 }}
+                                    </div>
+                                    {% endif %}
+                                </div>
+                                
+                                <div class="col-md-6 mb-3">
+                                    <label for="id_country" class="form-label">Country</label>
+                                    {{ profile_form.country }}
+                                    {% if profile_form.country.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {{ profile_form.country.errors.0 }}
+                                    </div>
+                                    {% endif %}
+                                </div>
+                                
+                                <div class="col-md-6 mb-3">
+                                    <label for="id_preferred_language" class="form-label">Preferred Language</label>
+                                    {{ profile_form.preferred_language }}
+                                    {% if profile_form.preferred_language.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {{ profile_form.preferred_language.errors.0 }}
+                                    </div>
+                                    {% endif %}
+                                </div>
+                                
+                                <div class="col-12 mb-3">
+                                    <label for="id_address" class="form-label">Address</label>
+                                    {{ profile_form.address }}
+                                    {% if profile_form.address.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {{ profile_form.address.errors.0 }}
+                                    </div>
+                                    {% endif %}
+                                </div>
+                                
+                                <div class="col-12 mb-3">
+                                    <label for="id_about_me" class="form-label">About Me</label>
+                                    {{ profile_form.about_me }}
+                                    {% if profile_form.about_me.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {{ profile_form.about_me.errors.0 }}
+                                    </div>
+                                    {% endif %}
+                                    <div class="form-text">
+                                        Tell us about yourself, your interests, and learning goals.
+                                    </div>
+                                </div>
+                                
+                                <!-- Cover Photo -->
+                                <div class="col-12 mb-3">
+                                    <label for="id_cover_photo" class="form-label">Cover Photo</label>
+                                    {{ profile_form.cover_photo }}
+                                    {% if profile_form.cover_photo.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {{ profile_form.cover_photo.errors.0 }}
+                                    </div>
+                                    {% endif %}
+                                    <div class="form-text">
+                                        Optional. Recommended size: 1500x500 pixels.
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Form Actions -->
+                    <div class="d-flex justify-content-between">
+                        <a href="{% url 'core:profile' %}" class="btn btn-outline-secondary">
+                            <i class="fas fa-times me-2"></i>Cancel
+                        </a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save me-2"></i>Save Changes
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Form styling */
+    .form-control:focus, .form-select:focus {
+        border-color: #3498db;
+        box-shadow: 0 0 0 0.25rem rgba(52, 152, 219, 0.25);
+    }
+    
+    .form-label {
+        font-weight: 500;
+        margin-bottom: 0.5rem;
+    }
+    
+    .form-text {
+        color: #6c757d;
+        font-size: 0.875rem;
+        margin-top: 0.25rem;
+    }
+    
+    .invalid-feedback {
+        display: block;
+        width: 100%;
+        margin-top: 0.25rem;
+        font-size: 0.875em;
+        color: #dc3545;
+    }
+    
+    /* Avatar upload styling */
+    .avatar-upload {
+        position: relative;
+    }
+    
+    .avatar-upload:hover::after {
+        content: 'Change Photo';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.5);
+        color: white;
+        display: flex;
+        align-items-center: center;
+        justify-content: center;
+        border-radius: 50%;
+        cursor: pointer;
+        font-size: 0.875rem;
+    }
+    
+    /* Card styling */
+    .card {
+        border-radius: 15px;
+    }
+    
+    .card-title {
+        color: #2c3e50;
+        font-weight: 600;
+    }
+    
+    /* Required field indicator */
+    .text-danger {
+        color: #dc3545 !important;
+    }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    $(document).ready(function() {
+        // Preview profile picture before upload
+        $('#id_profile_picture').change(function() {
+            const file = this.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    $('#profilePreview').attr('src', e.target.result);
+                    $('#profilePreview').removeClass('d-flex align-items-center justify-content-center');
+                    $('#profilePreview').css({
+                        'background': 'none',
+                        'color': 'inherit',
+                        'font-size': 'inherit'
+                    });
+                }
+                reader.readAsDataURL(file);
+            }
+        });
+        
+        // Preview cover photo
+        $('#id_cover_photo').change(function() {
+            const file = this.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    // Create or update cover photo preview
+                    if (!$('#coverPreview').length) {
+                        const preview = $('<div id="coverPreview" class="mt-2"></div>');
+                        $('<img>', {
+                            src: e.target.result,
+                            class: 'img-fluid rounded',
+                            style: 'max-height: 200px;'
+                        }).appendTo(preview);
+                        preview.insertAfter('#id_cover_photo');
+                    } else {
+                        $('#coverPreview img').attr('src', e.target.result);
+                    }
+                }
+                reader.readAsDataURL(file);
+            }
+        });
+        
+        // Auto-format phone number
+        $('#id_phone').on('input', function() {
+            let value = $(this).val().replace(/\D/g, '');
+            if (value.startsWith('880')) {
+                value = '+' + value;
+            } else if (value.startsWith('01')) {
+                value = '+880' + value.substring(1);
+            } else if (value.startsWith('1')) {
+                value = '+880' + value;
+            }
+            $(this).val(value);
+        });
+        
+        // Form validation
+        $('form').submit(function() {
+            let isValid = true;
+            
+            // Validate required fields
+            $('[required]').each(function() {
+                if (!$(this).val().trim()) {
+                    $(this).addClass('is-invalid');
+                    isValid = false;
+                } else {
+                    $(this).removeClass('is-invalid');
+                }
+            });
+            
+            // Validate email
+            const email = $('#id_email').val();
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (email && !emailRegex.test(email)) {
+                $('#id_email').addClass('is-invalid');
+                isValid = false;
+            }
+            
+            // Validate phone (if provided)
+            const phone = $('#id_phone').val();
+            if (phone) {
+                // Bangladeshi phone regex: +8801[3-9]XXXXXXXX
+                const phoneRegex = /^\+8801[3-9]\d{8}$/;
+                if (!phoneRegex.test(phone)) {
+                    $('#id_phone').addClass('is-invalid');
+                    isValid = false;
+                }
+            }
+            
+            if (!isValid) {
+                // Scroll to first error
+                $('.is-invalid').first().focus();
+                return false;
+            }
+            
+            // Show loading state
+            $('button[type="submit"]').prop('disabled', true);
+            $('button[type="submit"]').html('<i class="fas fa-spinner fa-spin me-2"></i>Saving...');
+            
+            return true;
+        });
+        
+        // Remove error class when user starts typing
+        $('input, select, textarea').on('input change', function() {
+            $(this).removeClass('is-invalid');
+        });
+        
+        // Age calculation for date of birth
+        $('#id_date_of_birth').on('change', function() {
+            const dob = new Date($(this).val());
+            if (dob) {
+                const today = new Date();
+                let age = today.getFullYear() - dob.getFullYear();
+                const monthDiff = today.getMonth() - dob.getMonth();
+                if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < dob.getDate())) {
+                    age--;
+                }
+                
+                if (age < 10) {
+                    $(this).addClass('is-invalid');
+                    $(this).next('.invalid-feedback').remove();
+                    $(this).after('<div class="invalid-feedback">You must be at least 10 years old.</div>');
+                } else {
+                    $(this).removeClass('is-invalid');
+                    $(this).next('.invalid-feedback').remove();
+                }
+            }
+        });
+        
+        // Initialize form fields
+        function initForm() {
+            // Set default values if empty
+            if (!$('#id_country').val()) {
+                $('#id_country').val('Bangladesh');
+            }
+            
+            if (!$('#id_preferred_language').val()) {
+                $('#id_preferred_language').val('en');
+            }
+        }
+        
+        initForm();
+    });
+</script>
+{% endblock %}

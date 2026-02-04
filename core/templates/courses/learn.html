@@ -1,0 +1,574 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load custom_filters %}
+
+{% block title %}{{ page_title }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .learning-container {
+        min-height: calc(100vh - 150px);
+        background-color: #f8f9fa;
+    }
+    
+    .course-sidebar {
+        background: white;
+        border-right: 1px solid #dee2e6;
+        height: 100vh;
+        position: fixed;
+        left: 0;
+        top: 0;
+        width: 300px;
+        overflow-y: auto;
+        padding-top: 70px;
+        z-index: 1000;
+    }
+    
+    .learning-content {
+        margin-left: 300px;
+        padding: 30px;
+        min-height: 100vh;
+    }
+    
+    .course-header {
+        background: linear-gradient(135deg, #2c3e50, #4a6583);
+        color: white;
+        padding: 25px;
+        border-radius: 10px;
+        margin-bottom: 30px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+    
+    .course-progress {
+        background: white;
+        border-radius: 10px;
+        padding: 20px;
+        margin-bottom: 25px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    }
+    
+    .progress-bar {
+        height: 10px;
+        border-radius: 5px;
+        background-color: #e9ecef;
+        overflow: hidden;
+    }
+    
+    .progress-fill {
+        height: 100%;
+        background: linear-gradient(90deg, #3498db, #2980b9);
+        border-radius: 5px;
+        transition: width 0.5s ease;
+    }
+    
+    .module-card {
+        background: white;
+        border: 1px solid #e9ecef;
+        border-radius: 8px;
+        margin-bottom: 15px;
+        overflow: hidden;
+        transition: all 0.3s;
+    }
+    
+    .module-card:hover {
+        border-color: #3498db;
+        box-shadow: 0 4px 12px rgba(52, 152, 219, 0.15);
+    }
+    
+    .module-header {
+        background: #f8f9fa;
+        padding: 15px 20px;
+        border-bottom: 1px solid #e9ecef;
+        cursor: pointer;
+    }
+    
+    .module-header.collapsed .module-toggle {
+        transform: rotate(-90deg);
+    }
+    
+    .module-toggle {
+        transition: transform 0.3s;
+        color: #6c757d;
+    }
+    
+    .lesson-list {
+        padding: 0;
+        margin: 0;
+    }
+    
+    .lesson-item {
+        padding: 12px 20px 12px 40px;
+        border-bottom: 1px solid #f1f1f1;
+        display: flex;
+        align-items: center;
+        transition: all 0.2s;
+        text-decoration: none;
+        color: #495057;
+    }
+    
+    .lesson-item:hover {
+        background-color: #f8fafc;
+        color: #2c3e50;
+        text-decoration: none;
+    }
+    
+    .lesson-item.active {
+        background-color: #e3f2fd;
+        border-left: 4px solid #3498db;
+        color: #2c3e50;
+    }
+    
+    .lesson-icon {
+        width: 24px;
+        text-align: center;
+        margin-right: 12px;
+        color: #6c757d;
+    }
+    
+    .lesson-item.active .lesson-icon {
+        color: #3498db;
+    }
+    
+    .lesson-status {
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+        border: 2px solid #dee2e6;
+        margin-right: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 10px;
+    }
+    
+    .lesson-status.completed {
+        background-color: #27ae60;
+        border-color: #27ae60;
+        color: white;
+    }
+    
+    .lesson-status.in-progress {
+        background-color: #3498db;
+        border-color: #3498db;
+        color: white;
+    }
+    
+    .lesson-duration {
+        font-size: 12px;
+        color: #6c757d;
+        margin-left: auto;
+    }
+    
+    .content-placeholder {
+        background: white;
+        border-radius: 10px;
+        padding: 50px;
+        text-align: center;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    }
+    
+    .content-placeholder i {
+        font-size: 64px;
+        color: #dee2e6;
+        margin-bottom: 20px;
+    }
+    
+    .course-sidebar-toggle {
+        position: fixed;
+        left: 20px;
+        top: 80px;
+        z-index: 1001;
+        background: white;
+        border: 1px solid #dee2e6;
+        border-radius: 50%;
+        width: 40px;
+        height: 40px;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    
+    @media (max-width: 992px) {
+        .course-sidebar {
+            transform: translateX(-100%);
+            transition: transform 0.3s;
+        }
+        
+        .course-sidebar.open {
+            transform: translateX(0);
+        }
+        
+        .learning-content {
+            margin-left: 0;
+        }
+        
+        .course-sidebar-toggle {
+            display: flex;
+        }
+    }
+    
+    .sidebar-header {
+        padding: 20px;
+        border-bottom: 1px solid #dee2e6;
+        background: white;
+        position: fixed;
+        top: 0;
+        width: 300px;
+        z-index: 1001;
+    }
+    
+    .sidebar-content {
+        padding-top: 90px;
+        padding-bottom: 30px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Mobile Toggle Button -->
+<div class="course-sidebar-toggle" id="sidebarToggle">
+    <i class="fas fa-bars"></i>
+</div>
+
+<!-- Course Sidebar -->
+<div class="course-sidebar" id="courseSidebar">
+    <div class="sidebar-header">
+        <h5 class="mb-1">{{ course.name }}</h5>
+        <p class="text-muted mb-0 small">{{ course.category.name }}</p>
+    </div>
+    
+    <div class="sidebar-content">
+        <!-- Course Progress -->
+        <div class="px-3 mb-4">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <span class="small text-muted">Course Progress</span>
+                <span class="small font-weight-bold">{{ enrollment.progress_percentage|floatformat:0 }}%</span>
+            </div>
+            <div class="progress-bar">
+                <div class="progress-fill" style="width: {{ enrollment.progress_percentage }}%"></div>
+            </div>
+        </div>
+        
+        <!-- Modules List -->
+        <div class="modules-list">
+            {% for module in course.modules.all %}
+            <div class="module-card">
+                <div class="module-header" data-toggle="collapse" data-target="#module{{ module.order }}" aria-expanded="true">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="mb-0 font-weight-bold">{{ module.order }}. {{ module.title }}</h6>
+                            <small class="text-muted">
+                                {{ module.lessons.count }} lessons • {{ module.duration_minutes }} min
+                            </small>
+                        </div>
+                        <i class="fas fa-chevron-down module-toggle"></i>
+                    </div>
+                </div>
+                
+                <div class="collapse show" id="module{{ module.order }}">
+                    <div class="lesson-list">
+                        {% for lesson in module.lessons.all %}
+                        <a href="#" class="lesson-item {% if forloop.first and module.order == 1 %}active{% endif %}">
+                            <div class="lesson-status {% if forloop.first and module.order == 1 %}in-progress{% endif %}">
+                                {% if forloop.first and module.order == 1 %}
+                                <i class="fas fa-play"></i>
+                                {% else %}
+                                <i class="far fa-circle"></i>
+                                {% endif %}
+                            </div>
+                            <div class="lesson-icon">
+                                {% if lesson.lesson_type == 'video' %}
+                                <i class="fas fa-video"></i>
+                                {% elif lesson.lesson_type == 'article' %}
+                                <i class="fas fa-file-alt"></i>
+                                {% elif lesson.lesson_type == 'quiz' %}
+                                <i class="fas fa-question-circle"></i>
+                                {% else %}
+                                <i class="fas fa-book"></i>
+                                {% endif %}
+                            </div>
+                            <div class="flex-grow-1">
+                                <div class="small font-weight-bold">{{ module.order }}.{{ lesson.order }} {{ lesson.title }}</div>
+                                <div class="small text-muted">
+                                    {{ lesson.get_lesson_type_display }}
+                                </div>
+                            </div>
+                            <div class="lesson-duration">
+                                {{ lesson.duration_minutes }}m
+                            </div>
+                        </a>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+            {% empty %}
+            <div class="text-center py-4">
+                <i class="fas fa-book-open fa-2x text-muted mb-3"></i>
+                <p class="text-muted">No modules available yet</p>
+            </div>
+            {% endfor %}
+        </div>
+        
+        <!-- Course Info -->
+        <div class="px-3 mt-4">
+            <div class="card border-0 bg-light">
+                <div class="card-body">
+                    <h6 class="font-weight-bold mb-3">Course Info</h6>
+                    <div class="small mb-2">
+                        <i class="fas fa-user-graduate mr-2 text-primary"></i>
+                        Instructor: {{ course.course_instructors.first.instructor.full_name|default:"Not assigned" }}
+                    </div>
+                    <div class="small mb-2">
+                        <i class="fas fa-clock mr-2 text-primary"></i>
+                        Duration: {{ course.estimated_duration_hours }} hours
+                    </div>
+                    <div class="small mb-2">
+                        <i class="fas fa-calendar-alt mr-2 text-primary"></i>
+                        Access until: {{ enrollment.end_date|date:"M d, Y" }}
+                    </div>
+                    <div class="small">
+                        <i class="fas fa-chart-line mr-2 text-primary"></i>
+                        Level: {{ course.get_level_display }}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Learning Content -->
+<div class="learning-content" id="learningContent">
+    <!-- Course Header -->
+    <div class="course-header">
+        <div class="d-flex justify-content-between align-items-start">
+            <div>
+                <h1 class="h3 mb-2">{{ course.name }}</h1>
+                <p class="mb-0 opacity-75">{{ course.short_description }}</p>
+            </div>
+            <div class="text-end">
+                <div class="badge bg-light text-dark mb-2">{{ course.get_level_display }}</div>
+                <div class="text-white-50 small">
+                    Progress: {{ enrollment.progress_percentage|floatformat:0 }}%
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Welcome Message -->
+    <div class="content-placeholder">
+        <i class="fas fa-graduation-cap"></i>
+        <h3 class="mb-3">Welcome to Your Learning Journey!</h3>
+        <p class="text-muted mb-4">
+            Select a lesson from the sidebar to begin learning. 
+            Track your progress and complete all lessons to earn your certificate.
+        </p>
+        
+        {% if first_module and first_lesson %}
+        <a href="#" class="btn btn-primary btn-lg">
+            <i class="fas fa-play me-2"></i> Start First Lesson
+        </a>
+        {% else %}
+        <div class="alert alert-warning">
+            <i class="fas fa-info-circle me-2"></i>
+            Course content is being prepared. Please check back soon.
+        </div>
+        {% endif %}
+        
+        <!-- Quick Stats -->
+        <div class="row mt-5">
+            <div class="col-md-4">
+                <div class="text-center">
+                    <div class="h2 text-primary">{{ course.modules.count }}</div>
+                    <div class="text-muted">Modules</div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="text-center">
+                    <div class="h2 text-primary">{{ total_lessons }}</div>
+                    <div class="text-muted">Total Lessons</div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="text-center">
+                    <div class="h2 text-primary">{{ enrollment.total_time_spent|divisibleby:"60"|default:"0" }}</div>
+                    <div class="text-muted">Hours Spent</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Course Description -->
+    <div class="card border-0 shadow-sm mt-4">
+        <div class="card-body">
+            <h5 class="card-title mb-3">About This Course</h5>
+            <div class="course-description">
+                {{ course.description|linebreaks }}
+            </div>
+            
+            {% if course.learning_outcomes %}
+            <h6 class="mt-4 mb-3">What You'll Learn</h6>
+            <div class="row">
+                <div class="col-md-6">
+                    <ul class="list-unstyled">
+                        {% for outcome in course.learning_outcomes|split:"\n"|slice:":3" %}
+                        <li class="mb-2">
+                            <i class="fas fa-check-circle text-success me-2"></i>
+                            {{ outcome|striptags }}
+                        </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+                <div class="col-md-6">
+                    <ul class="list-unstyled">
+                        {% for outcome in course.learning_outcomes|split:"\n"|slice:"3:" %}
+                        <li class="mb-2">
+                            <i class="fas fa-check-circle text-success me-2"></i>
+                            {{ outcome|striptags }}
+                        </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    
+    <!-- Instructor Info -->
+    {% if course.course_instructors.exists %}
+    <div class="card border-0 shadow-sm mt-4">
+        <div class="card-body">
+            <h5 class="card-title mb-3">Meet Your Instructor{% if course.course_instructors.count > 1 %}s{% endif %}</h5>
+            <div class="row">
+                {% for course_instructor in course.course_instructors.all %}
+                <div class="col-md-6 mb-3">
+                    <div class="d-flex align-items-start">
+                        {% if course_instructor.instructor.profile_picture %}
+                        <img src="{{ course_instructor.instructor.profile_picture.url }}" 
+                             class="rounded-circle me-3" 
+                             width="70" 
+                             height="70" 
+                             alt="{{ course_instructor.instructor.full_name }}">
+                        {% else %}
+                        <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center me-3" 
+                             style="width: 70px; height: 70px;">
+                            <i class="fas fa-user fa-2x"></i>
+                        </div>
+                        {% endif %}
+                        <div>
+                            <h6 class="mb-1">{{ course_instructor.instructor.full_name }}</h6>
+                            <p class="text-muted small mb-1">
+                                {{ course_instructor.instructor.get_role_display }}
+                            </p>
+                            <p class="small mb-0">
+                                {{ course_instructor.instructor.specialization }}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Mobile sidebar toggle
+        const sidebarToggle = document.getElementById('sidebarToggle');
+        const courseSidebar = document.getElementById('courseSidebar');
+        const learningContent = document.getElementById('learningContent');
+        
+        sidebarToggle.addEventListener('click', function() {
+            courseSidebar.classList.toggle('open');
+            sidebarToggle.innerHTML = courseSidebar.classList.contains('open') 
+                ? '<i class="fas fa-times"></i>' 
+                : '<i class="fas fa-bars"></i>';
+        });
+        
+        // Close sidebar when clicking outside on mobile
+        learningContent.addEventListener('click', function() {
+            if (window.innerWidth <= 992 && courseSidebar.classList.contains('open')) {
+                courseSidebar.classList.remove('open');
+                sidebarToggle.innerHTML = '<i class="fas fa-bars"></i>';
+            }
+        });
+        
+        // Module collapse/expand
+        document.querySelectorAll('.module-header').forEach(header => {
+            header.addEventListener('click', function() {
+                const icon = this.querySelector('.module-toggle');
+                icon.style.transform = icon.style.transform === 'rotate(180deg)' 
+                    ? 'rotate(0deg)' 
+                    : 'rotate(180deg)';
+            });
+        });
+        
+        // Set active lesson
+        document.querySelectorAll('.lesson-item').forEach(item => {
+            item.addEventListener('click', function(e) {
+                e.preventDefault();
+                
+                // Remove active class from all lessons
+                document.querySelectorAll('.lesson-item').forEach(lesson => {
+                    lesson.classList.remove('active');
+                });
+                
+                // Add active class to clicked lesson
+                this.classList.add('active');
+                
+                // Update lesson status
+                const statusIcon = this.querySelector('.lesson-status i');
+                statusIcon.className = 'fas fa-play';
+                
+                // Show loading/placeholder content
+                showLessonContent(this);
+            });
+        });
+        
+        function showLessonContent(lessonItem) {
+            const contentPlaceholder = document.querySelector('.content-placeholder');
+            const lessonTitle = lessonItem.querySelector('.font-weight-bold').textContent;
+            
+            contentPlaceholder.innerHTML = `
+                <div class="spinner-border text-primary mb-3" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+                <h3>Loading "${lessonTitle}"</h3>
+                <p class="text-muted">Preparing lesson content...</p>
+            `;
+            
+            // Simulate loading delay
+            setTimeout(() => {
+                contentPlaceholder.innerHTML = `
+                    <h3>${lessonTitle}</h3>
+                    <p class="text-muted mb-4">Lesson content will be displayed here</p>
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i>
+                        This is a preview. Complete lesson content is coming soon.
+                    </div>
+                    <button class="btn btn-success mt-3">
+                        <i class="fas fa-check-circle me-2"></i> Mark as Complete
+                    </button>
+                `;
+            }, 1000);
+        }
+        
+        // Calculate total lessons
+        const totalLessons = document.querySelectorAll('.lesson-item').length;
+        document.querySelector('#learningContent .h2.text-primary:nth-child(2)').textContent = totalLessons;
+        
+        // Handle window resize
+        window.addEventListener('resize', function() {
+            if (window.innerWidth > 992) {
+                courseSidebar.classList.remove('open');
+                sidebarToggle.innerHTML = '<i class="fas fa-bars"></i>';
+            }
+        });
+    });
+</script>
+{% endblock %}

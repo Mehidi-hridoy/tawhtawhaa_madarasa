@@ -1,0 +1,92 @@
+{% extends "admin/index.html" %}
+{% load i18n static %}
+
+{% block content %}
+<div id="content-main">
+    {% include "admin/app_list.html" with app_list=app_list %}
+    
+    <div class="module">
+        <table style="width: 100%;">
+            <caption>
+                <a href="#" class="section" title="System Statistics">System Statistics</a>
+            </caption>
+            <tbody>
+                <tr>
+                    <th scope="row">Total Courses</th>
+                    <td>{{ total_courses }}</td>
+                </tr>
+                <tr>
+                    <th scope="row">Active Students</th>
+                    <td>{{ active_students }}</td>
+                </tr>
+                <tr>
+                    <th scope="row">Total Enrollments</th>
+                    <td>{{ total_enrollments }}</td>
+                </tr>
+                <tr>
+                    <th scope="row">Pending Payments</th>
+                    <td>{{ pending_payments }}</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+    
+    <div class="module">
+        <h2>Quick Actions</h2>
+        <ul class="actionlist">
+            <li>
+                <a href="{% url 'admin:core_course_add' %}" class="addlink">
+                    Add New Course
+                </a>
+            </li>
+            <li>
+                <a href="{% url 'admin:core_instructor_add' %}" class="addlink">
+                    Add New Instructor
+                </a>
+            </li>
+            <li>
+                <a href="{% url 'admin:core_coupon_add' %}" class="addlink">
+                    Create Coupon
+                </a>
+            </li>
+            <li>
+                <a href="{% url 'admin:core_blogpost_add' %}" class="addlink">
+                    Add Blog Post
+                </a>
+            </li>
+        </ul>
+    </div>
+</div>
+{% endblock %}
+
+{% block sidebar %}
+<div id="content-related">
+    <div class="module" id="recent-actions-module">
+        <h2>{% trans 'Recent Actions' %}</h2>
+        <h3>{% trans 'My Actions' %}</h3>
+            {% load log %}
+            {% get_admin_log 10 as admin_log for_user user %}
+            {% if not admin_log %}
+            <p>{% trans 'None available' %}</p>
+            {% else %}
+            <ul class="actionlist">
+            {% for entry in admin_log %}
+            <li class="{% if entry.is_addition %}addlink{% endif %}{% if entry.is_change %}changelink{% endif %}{% if entry.is_deletion %}deletelink{% endif %}">
+                {% if entry.is_deletion or not entry.get_admin_url %}
+                    {{ entry.object_repr }}
+                {% else %}
+                    <a href="{{ entry.get_admin_url }}">{{ entry.object_repr }}</a>
+                {% endif %}
+                <br>
+                {% if entry.content_type %}
+                    <span class="mini quiet">{% filter capfirst %}{{ entry.content_type.name }}{% endfilter %}</span>
+                {% else %}
+                    <span class="mini quiet">{% trans 'Unknown content' %}</span>
+                {% endif %}
+            </li>
+            {% endfor %}
+            </ul>
+            {% endif %}
+    </div>
+</div>
+{% endblock %}

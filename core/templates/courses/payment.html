@@ -1,0 +1,165 @@
+<!-- templates/courses/payment.html -->
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ page_title }}{% endblock %}
+
+{% block content %}
+<div class="container py-5 mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8 col-lg-6">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body p-4">
+                    <!-- Header -->
+                    <div class="text-center mb-4">
+                        <div class="mb-3">
+                            <i class="fas fa-lock fa-3x text-primary"></i>
+                        </div>
+                        <h2 class="fw-bold mb-3">Complete Your Enrollment</h2>
+                        <p class="text-muted">
+                            Complete payment to enroll in <strong>{{ payment.enrollment.course.name }}</strong>
+                        </p>
+                    </div>
+                    
+                    <!-- Payment Details -->
+                    <div class="card bg-light border-0 mb-4">
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-6">
+                                    <small class="text-muted">Course</small>
+                                    <p class="fw-bold mb-0">{{ payment.enrollment.course.name }}</p>
+                                </div>
+                                <div class="col-6 text-end">
+                                    <small class="text-muted">Amount</small>
+                                    <h4 class="fw-bold text-primary mb-0">৳{{ payment.amount }}</h4>
+                                </div>
+                            </div>
+                            <div class="mt-3">
+                                <small class="text-muted">Payment ID</small>
+                                <p class="mb-0">{{ payment.transaction_id }}</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Payment Form -->
+                    <form method="POST">
+                        {% csrf_token %}
+                        
+                        <div class="mb-4">
+                            <h5 class="fw-bold mb-3">Select Payment Method</h5>
+                            
+                            <div class="row g-3">
+                                <!-- bKash -->
+                                <div class="col-md-6">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" 
+                                               name="payment_method" id="bkash" value="bkash" checked>
+                                        <label class="form-check-label w-100" for="bkash">
+                                            <div class="card border">
+                                                <div class="card-body text-center">
+                                                    <i class="fas fa-mobile-alt fa-2x text-danger mb-2"></i>
+                                                    <h6 class="fw-bold mb-1">bKash</h6>
+                                                    <small class="text-muted">Send to: 01740-433580</small>
+                                                </div>
+                                            </div>
+                                        </label>
+                                    </div>
+                                </div>
+                                
+                                <!-- Nagad -->
+                                <div class="col-md-6">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" 
+                                               name="payment_method" id="nagad" value="nagad">
+                                        <label class="form-check-label w-100" for="nagad">
+                                            <div class="card border">
+                                                <div class="card-body text-center">
+                                                    <i class="fas fa-wallet fa-2x text-success mb-2"></i>
+                                                    <h6 class="fw-bold mb-1">Nagad</h6>
+                                                    <small class="text-muted">Send to: 01740-433580</small>
+                                                </div>
+                                            </div>
+                                        </label>
+                                    </div>
+                                </div>
+                                
+                                <!-- Rocket -->
+                                <div class="col-md-6">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" 
+                                               name="payment_method" id="rocket" value="rocket">
+                                        <label class="form-check-label w-100" for="rocket">
+                                            <div class="card border">
+                                                <div class="card-body text-center">
+                                                    <i class="fas fa-rocket fa-2x text-warning mb-2"></i>
+                                                    <h6 class="fw-bold mb-1">Rocket</h6>
+                                                    <small class="text-muted">Send to: 01740-433580</small>
+                                                </div>
+                                            </div>
+                                        </label>
+                                    </div>
+                                </div>
+                                
+                                <!-- Bank Transfer -->
+                                <div class="col-md-6">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" 
+                                               name="payment_method" id="bank" value="bank">
+                                        <label class="form-check-label w-100" for="bank">
+                                            <div class="card border">
+                                                <div class="card-body text-center">
+                                                    <i class="fas fa-university fa-2x text-info mb-2"></i>
+                                                    <h6 class="fw-bold mb-1">Bank Transfer</h6>
+                                                    <small class="text-muted">Islami Bank Bangladesh Ltd</small>
+                                                </div>
+                                            </div>
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Transaction ID -->
+                        <div class="mb-4">
+                            <label for="transaction_id" class="form-label fw-bold">
+                                Transaction ID / Reference Number <span class="text-danger">*</span>
+                            </label>
+                            <input type="text" class="form-control" id="transaction_id" 
+                                   name="transaction_id" required
+                                   placeholder="Enter your payment transaction ID">
+                            <div class="form-text">
+                                Enter the transaction ID from your payment confirmation message
+                            </div>
+                        </div>
+                        
+                        <!-- Instructions -->
+                        <div class="alert alert-info mb-4">
+                            <h6 class="fw-bold mb-2">
+                                <i class="fas fa-info-circle me-2"></i>Payment Instructions
+                            </h6>
+                            <ol class="mb-0 small">
+                                <li>Send ৳{{ payment.amount }} to the selected payment method</li>
+                                <li>Use your username as reference: <strong>{{ request.user.username }}</strong></li>
+                                <li>Keep the transaction ID from confirmation message</li>
+                                <li>Enter the transaction ID above and submit</li>
+                                <li>Your enrollment will be activated after verification</li>
+                            </ol>
+                        </div>
+                        
+                        <!-- Form Actions -->
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-primary btn-lg">
+                                <i class="fas fa-check-circle me-2"></i>Complete Payment
+                            </button>
+                            <a href="{% url 'core:course_detail' payment.enrollment.course.slug %}" 
+                               class="btn btn-outline-secondary">
+                                <i class="fas fa-times me-2"></i>Cancel
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

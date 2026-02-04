@@ -1,0 +1,128 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ page_title }}{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card shadow">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0">
+                        <i class="{{ payment_details.icon }} me-2"></i>
+                        {{ payment_details.method_name }} Payment Instructions
+                    </h4>
+                </div>
+                <div class="card-body">
+                    <!-- Payment Summary -->
+                    <div class="alert alert-success">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <h5 class="mb-1">Amount to Pay</h5>
+                                <p class="mb-0 text-muted">Transaction ID: {{ payment.transaction_id }}</p>
+                            </div>
+                            <h3 class="text-primary mb-0">৳{{ payment.amount }}</h3>
+                        </div>
+                    </div>
+                    
+                    <!-- Payment Details -->
+                    <div class="payment-details-card mb-4">
+                        <div class="d-flex align-items-start">
+                            <div class="me-4">
+                                <i class="{{ payment_details.icon }} fa-3x" style="color: {{ payment_details.icon_color }};"></i>
+                            </div>
+                            <div class="flex-grow-1">
+                                <h5>{{ payment_details.method_name }} Details</h5>
+                                {% if payment_details.method_name == 'Bank Transfer' %}
+                                <p class="mb-1"><strong>Bank:</strong> {{ payment_details.bank_name }}</p>
+                                <p class="mb-1"><strong>Account Name:</strong> {{ payment_details.account_name }}</p>
+                                <p class="mb-1"><strong>Account Number:</strong> {{ payment_details.account_number }}</p>
+                                <p class="mb-1"><strong>Branch:</strong> {{ payment_details.branch }}</p>
+                                {% else %}
+                                <p class="mb-1"><strong>Account Number:</strong> {{ payment_details.account_number }}</p>
+                                <p class="mb-1"><strong>Account Name:</strong> {{ payment_details.account_name }}</p>
+                                {% endif %}
+                                <p class="mb-0"><strong>Reference:</strong> {{ payment_details.reference }}</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Instructions -->
+                    <div class="instructions-card mb-4">
+                        <h5 class="mb-3"><i class="fas fa-list-ol me-2"></i> Step-by-Step Instructions</h5>
+                        <div class="border rounded p-4">
+                            <ol class="mb-0">
+                                {% for instruction in payment_details.instructions %}
+                                <li class="mb-2">{{ instruction }}</li>
+                                {% endfor %}
+                            </ol>
+                        </div>
+                    </div>
+                    
+                    <!-- Important Notes -->
+                    <div class="alert alert-warning">
+                        <h5><i class="fas fa-exclamation-triangle me-2"></i> Important Notes</h5>
+                        <ul class="mb-0">
+                            <li>Use the exact reference number: <code>{{ payment.transaction_id }}</code></li>
+                            <li>Payment verification takes up to 24 hours</li>
+                            <li>You will receive email confirmation</li>
+                            <li>Course access will be granted after verification</li>
+                            <li>Keep your payment receipt/screenshot</li>
+                        </ul>
+                    </div>
+                    
+                    <!-- Action Buttons -->
+                    <div class="d-flex justify-content-between mt-4">
+                        <a href="{% url 'core:payment_method_selection' payment_id=payment.id %}" 
+                           class="btn btn-outline-secondary">
+                            <i class="fas fa-arrow-left me-2"></i> Change Payment Method
+                        </a>
+                        
+                        <div>
+                            <a href="{% url 'core:payment_verification' payment_id=payment.id %}" 
+                               class="btn btn-success btn-lg">
+                                <i class="fas fa-check-circle me-2"></i> I Have Made Payment
+                            </a>
+                            
+                            <a href="{% url 'core:course_detail' slug=payment.enrollment.course.slug %}" 
+                               class="btn btn-outline-primary ms-2">
+                                <i class="fas fa-book me-2"></i> Back to Course
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .payment-details-card {
+        background: linear-gradient(135deg, #f8fafc, #e3f2fd);
+        border-radius: 10px;
+        padding: 20px;
+        border-left: 5px solid #3498db;
+    }
+    
+    .instructions-card .border {
+        border-color: #dee2e6 !important;
+    }
+    
+    .instructions-card ol {
+        padding-left: 20px;
+        margin-bottom: 0;
+    }
+    
+    .instructions-card li {
+        margin-bottom: 10px;
+        padding-left: 10px;
+    }
+    
+    .instructions-card li:last-child {
+        margin-bottom: 0;
+    }
+</style>
+{% endblock %}

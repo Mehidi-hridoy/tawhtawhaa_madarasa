@@ -5,9 +5,10 @@ from django.core.validators import MinValueValidator, MaxValueValidator
 import uuid 
 from django.db.models import Q, F
 from django.utils.text import slugify
-import uuid
 import os
 from decimal import Decimal
+from django.core.mail import send_mail
+from django.conf import settings
 
 # ==================== UTILITY FUNCTIONS ====================
 def course_thumbnail_path(instance, filename):
@@ -17,10 +18,15 @@ def course_featured_image_path(instance, filename):
     return f'courses/{instance.id}/featured/{filename}'
 
 def lesson_video_path(instance, filename):
-    return f'courses/{instance.module.self_learning_course.course.id}/lessons/{instance.id}/{filename}'
+    # Fixed the path - removed incorrect self_learning_course reference
+    if instance.module and instance.module.course:
+        return f'courses/{instance.module.course.id}/lessons/{instance.id}/{filename}'
+    return f'courses/temp/lessons/{instance.id}/{filename}'
 
 def resource_file_path(instance, filename):
-    return f'courses/{instance.course.id}/resources/{filename}'
+    if instance.course:
+        return f'courses/{instance.course.id}/resources/{filename}'
+    return f'courses/temp/resources/{filename}'
 
 # ==================== CATEGORY MODEL ====================
 class Category(models.Model):
@@ -48,7 +54,13 @@ class Category(models.Model):
     
     def save(self, *args, **kwargs):
         if not self.slug:
-            self.slug = slugify(self.name)
+            base_slug = slugify(self.name)
+            slug = base_slug
+            counter = 1
+            while Category.objects.filter(slug=slug).exists():
+                slug = f"{base_slug}-{counter}"
+                counter += 1
+            self.slug = slug
         super().save(*args, **kwargs)
     
     def __str__(self):
@@ -91,8 +103,10 @@ class Course(models.Model):
     description = models.TextField()
     short_description = models.CharField(max_length=300)
     learning_outcomes = models.TextField(blank=True)
-    prerequisites = models.TextField(blank=True)
-    target_audience = models.TextField(blank=True)
+    
+    # Ratings and Reviews (Added missing fields)
+    average_rating = models.FloatField(default=0.0)
+    review_count = models.IntegerField(default=0)
     
     # Pricing
     price_type = models.CharField(max_length=20, choices=PRICE_TYPES, default='free')
@@ -101,7 +115,7 @@ class Course(models.Model):
     currency = models.CharField(max_length=3, default='BDT')
     
     # Duration
-    estimated_duration_hours = models.IntegerField(default=0)
+    estimated_duration_hours = models.IntegerField(default=0, help_text="Estimated total duration in hours")
     access_duration_days = models.IntegerField(default=365)  # Days after enrollment
     
     # Multimedia
@@ -117,9 +131,8 @@ class Course(models.Model):
     requires_completion_certificate = models.BooleanField(default=False)
     
     # Statistics
-    enrollment_count = models.IntegerField(default=0)
-    average_rating = models.FloatField(default=0.0)
-    review_count = models.IntegerField(default=0)
+    total_enrollments = models.IntegerField(default=0)
+    total_completions = models.IntegerField(default=0)
     
     # Metadata
     created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='created_courses')
@@ -134,10 +147,21 @@ class Course(models.Model):
     
     class Meta:
         ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['is_active', 'is_featured']),
+            models.Index(fields=['slug']),
+            models.Index(fields=['category', 'is_active']),
+        ]
     
     def save(self, *args, **kwargs):
         if not self.slug:
-            self.slug = slugify(self.name)
+            base_slug = slugify(self.name)
+            slug = base_slug
+            counter = 1
+            while Course.objects.filter(slug=slug).exclude(id=self.id).exists():
+                slug = f"{base_slug}-{counter}"
+                counter += 1
+            self.slug = slug
         super().save(*args, **kwargs)
     
     def __str__(self):
@@ -158,21 +182,18 @@ class Course(models.Model):
             return int(discount)
         return 0
     
-    def get_total_modules_count(self):
-        return self.modules.count()
-    
-    def get_total_lessons_count(self):
-        total = 0
-        for module in self.modules.all():
-            total += module.lessons.count()
-        return total
+    def update_statistics(self):
+        """Update course statistics"""
+        from django.db.models import Count, Q
+        self.total_enrollments = self.enrollments.filter(enrollment_status='active').count()
+        self.total_completions = self.enrollments.filter(enrollment_status='completed').count()
+        self.save()
 
 # ==================== COURSE INSTRUCTORS ====================
 class CourseInstructor(models.Model):
     """M2M relationship between Course and Instructor with extra data"""
     course = models.ForeignKey(Course, on_delete=models.CASCADE, related_name='course_instructors')
     instructor = models.ForeignKey('Instructor', on_delete=models.CASCADE, related_name='instructor_courses')
-    is_primary = models.BooleanField(default=False)
     display_order = models.IntegerField(default=0)
     added_at = models.DateTimeField(auto_now_add=True)
     
@@ -197,7 +218,6 @@ class Instructor(models.Model):
     
     # Personal Information
     full_name = models.CharField(max_length=200)
-    title = models.CharField(max_length=100)
     bio = models.TextField()
     specialization = models.TextField()
     
@@ -207,15 +227,8 @@ class Instructor(models.Model):
     qualifications = models.TextField()
     
     # Contact
-    phone = models.CharField(max_length=20)
-    email = models.EmailField()
-    
-    # Social Media
-    website = models.URLField(blank=True)
-    facebook = models.URLField(blank=True)
-    twitter = models.URLField(blank=True)
-    linkedin = models.URLField(blank=True)
-    youtube = models.URLField(blank=True)
+    phone = models.CharField(max_length=20, blank=True)
+    email = models.EmailField(blank=True)
     
     # Images
     profile_picture = models.ImageField(upload_to='instructors/profiles/', null=True, blank=True)
@@ -223,13 +236,11 @@ class Instructor(models.Model):
     
     # Status
     is_active = models.BooleanField(default=True)
-    is_verified = models.BooleanField(default=False)
     display_order = models.IntegerField(default=0)
     
     # Statistics
     total_courses = models.IntegerField(default=0)
     total_students = models.IntegerField(default=0)
-    average_rating = models.FloatField(default=0.0)
     
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -242,6 +253,19 @@ class Instructor(models.Model):
     
     def get_active_courses(self):
         return self.course_instructors.filter(course__is_active=True)
+    
+    def update_statistics(self):
+        """Update instructor statistics"""
+        self.total_courses = self.instructor_courses.filter(course__is_active=True).count()
+        
+        # Count unique students across all courses
+        from django.db.models import Count
+        student_count = Enrollment.objects.filter(
+            course__in=self.instructor_courses.values_list('course', flat=True),
+            enrollment_status='active'
+        ).values('student').distinct().count()
+        self.total_students = student_count
+        self.save()
 
 # ==================== STUDENT MODEL ====================
 class Student(models.Model):
@@ -269,7 +293,7 @@ class Student(models.Model):
     full_name = models.CharField(max_length=200)
     date_of_birth = models.DateField(null=True, blank=True)
     gender = models.CharField(max_length=20, choices=GENDER_CHOICES, blank=True)
-    phone = models.CharField(max_length=20, blank=True,)
+    phone = models.CharField(max_length=20, blank=True)
     
     # Address
     address = models.TextField(blank=True)
@@ -277,28 +301,26 @@ class Student(models.Model):
     country = models.CharField(max_length=100, default='Bangladesh')
     
     # Background
-    occupation = models.CharField(max_length=50, choices=OCCUPATION_CHOICES, blank=True, )
+    occupation = models.CharField(max_length=50, choices=OCCUPATION_CHOICES, blank=True)
     education_level = models.CharField(max_length=100, blank=True)
     about_me = models.TextField(blank=True)
     
     # Preferences
     preferred_language = models.CharField(max_length=50, blank=True, default='en')
-    timezone = models.CharField(max_length=50, default='Asia/Dhaka')
     
     # Profile
     profile_picture = models.ImageField(upload_to='students/profiles/', null=True, blank=True)
     cover_photo = models.ImageField(upload_to='students/covers/', null=True, blank=True)
     
+    # Statistics (Added missing field)
+    total_courses_enrolled = models.IntegerField(default=0)
+    total_courses_completed = models.IntegerField(default=0)
+    total_points = models.IntegerField(default=0)
+    
     # Status
     is_active = models.BooleanField(default=True)
     email_verified = models.BooleanField(default=False)
     phone_verified = models.BooleanField(default=False)
-    
-    # Statistics
-    total_courses_enrolled = models.IntegerField(default=0)
-    total_courses_completed = models.IntegerField(default=0)
-    total_learning_hours = models.IntegerField(default=0)
-    streak_days = models.IntegerField(default=0)
     
     # Metadata
     registration_date = models.DateTimeField(auto_now_add=True)
@@ -317,10 +339,19 @@ class Student(models.Model):
             return today.year - self.date_of_birth.year - ((today.month, today.day) < (self.date_of_birth.month, self.date_of_birth.day))
         return None
     
-    def get_completion_rate(self):
-        if self.total_courses_enrolled > 0:
-            return (self.total_courses_completed / self.total_courses_enrolled) * 100
-        return 0
+    def update_statistics(self):
+        """Update student statistics"""
+        self.total_courses_enrolled = self.enrollments.count()
+        self.total_courses_completed = self.enrollments.filter(enrollment_status='completed').count()
+        
+        # Calculate total points from completed lessons
+        from django.db.models import Sum
+        total_points = StudentLessonProgress.objects.filter(
+            student=self,
+            status='completed'
+        ).aggregate(total=Sum('points_earned'))['total'] or 0
+        self.total_points = total_points
+        self.save()
 
 # ==================== MODULE MODEL ====================
 class Module(models.Model):
@@ -328,7 +359,7 @@ class Module(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     course = models.ForeignKey(Course, on_delete=models.CASCADE, related_name='modules')
     
-    # Module details
+    # Module details (Added missing title field)
     title = models.CharField(max_length=200)
     description = models.TextField(blank=True)
     order = models.IntegerField(default=0)
@@ -354,7 +385,16 @@ class Module(models.Model):
         return self.lessons.count()
     
     def get_total_duration(self):
+        from django.db.models import Sum
         return self.lessons.aggregate(total=models.Sum('duration_minutes'))['total'] or 0
+    
+    def get_completed_lessons_count(self, student):
+        """Get number of lessons completed by a specific student"""
+        return StudentLessonProgress.objects.filter(
+            student=student,
+            lesson__module=self,
+            status='completed'
+        ).count()
 
 # ==================== LESSON MODEL ====================
 class Lesson(models.Model):
@@ -444,6 +484,28 @@ class Lesson(models.Model):
             if match:
                 return f'https://player.vimeo.com/video/{match.group(1)}'
         return self.video_url
+    
+    def get_next_lesson(self):
+        """Get the next lesson in the module"""
+        try:
+            return Lesson.objects.filter(
+                module=self.module,
+                order__gt=self.order,
+                is_published=True
+            ).order_by('order').first()
+        except:
+            return None
+    
+    def get_previous_lesson(self):
+        """Get the previous lesson in the module"""
+        try:
+            return Lesson.objects.filter(
+                module=self.module,
+                order__lt=self.order,
+                is_published=True
+            ).order_by('-order').first()
+        except:
+            return None
 
 # ==================== QUIZ MODEL ====================
 class Quiz(models.Model):
@@ -460,13 +522,13 @@ class Quiz(models.Model):
     course = models.ForeignKey(Course, on_delete=models.CASCADE, related_name='quizzes', null=True, blank=True)
     
     # Quiz details
-    title = models.CharField(max_length=200)
+    title = models.CharField(max_length=200, blank=True)  # Added title field
     description = models.TextField(blank=True)
     quiz_type = models.CharField(max_length=20, choices=QUIZ_TYPES, default='practice')
     
     # Settings
     duration_minutes = models.IntegerField(default=30)
-    passing_score = models.IntegerField(default=70)
+    passing_score = models.IntegerField(default=80)
     max_attempts = models.IntegerField(default=3)
     show_correct_answers = models.BooleanField(default=True)
     randomize_questions = models.BooleanField(default=True)
@@ -487,13 +549,33 @@ class Quiz(models.Model):
     available_until = models.DateTimeField(null=True, blank=True)
     
     def __str__(self):
-        return f"{self.title} ({self.get_quiz_type_display()})"
+        # Get title from related objects
+        title = self.title
+        if not title and self.lesson:
+            title = self.lesson.title
+        elif not title and self.module:
+            title = self.module.title
+        elif not title and self.course:
+            title = self.course.name
+        
+        return f"Quiz: {title} ({self.get_quiz_type_display()})"
     
     def get_question_count(self):
         return self.questions.count()
     
     def get_total_duration(self):
         return self.duration_minutes
+    
+    def save(self, *args, **kwargs):
+        # Auto-generate title if not provided
+        if not self.title:
+            if self.lesson:
+                self.title = f"Quiz: {self.lesson.title}"
+            elif self.module:
+                self.title = f"Module Quiz: {self.module.title}"
+            elif self.course:
+                self.title = f"Final Exam: {self.course.name}"
+        super().save(*args, **kwargs)
 
 # ==================== QUIZ QUESTION MODEL ====================
 class QuizQuestion(models.Model):
@@ -517,6 +599,10 @@ class QuizQuestion(models.Model):
     points = models.IntegerField(default=10)
     order = models.IntegerField(default=0)
     
+    # Options for MCQ (store as JSON)
+    options = models.JSONField(default=list, blank=True)
+    correct_answers = models.JSONField(default=list, blank=True)
+    
     # Media
     image = models.ImageField(upload_to='quiz/questions/', null=True, blank=True)
     audio = models.FileField(upload_to='quiz/audio/', null=True, blank=True)
@@ -532,71 +618,22 @@ class QuizQuestion(models.Model):
     
     def __str__(self):
         return f"Q{self.order}: {self.question_text[:50]}..."
-
-# ==================== QUESTION OPTION MODEL ====================
-class QuestionOption(models.Model):
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    question = models.ForeignKey(QuizQuestion, on_delete=models.CASCADE, related_name='options')
     
-    # Option details
-    option_text = models.TextField()
-    is_correct = models.BooleanField(default=False)
-    explanation = models.TextField(blank=True)
-    order = models.IntegerField(default=0)
-    
-    # For matching questions
-    match_text = models.TextField(blank=True)
-    
-    class Meta:
-        ordering = ['order']
-    
-    def __str__(self):
-        return f"Option {self.order}: {self.option_text[:30]}..."
-
-# ==================== INTERACTIVE VIDEO MCQ MODEL ====================
-class InteractiveMCQ(models.Model):
-    """MCQ that appears during video playback"""
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    lesson = models.ForeignKey(Lesson, on_delete=models.CASCADE, related_name='interactive_mcqs')
-    
-    # Question details
-    question = models.TextField()
-    question_type = models.CharField(max_length=20, choices=[
-        ('single', 'Single Correct'),
-        ('multiple', 'Multiple Correct'),
-    ], default='single')
-    
-    # Timing in video (seconds)
-    appear_at_second = models.IntegerField()
-    time_limit_seconds = models.IntegerField(default=60)
-    
-    # Points and requirements
-    points_value = models.IntegerField(default=5)
-    is_required = models.BooleanField(default=True)
-    allow_skip = models.BooleanField(default=False)
-    
-    # Attempt limits
-    max_attempts = models.IntegerField(default=1)
-    
-    # Status
-    is_active = models.BooleanField(default=True)
-    
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-    
-    class Meta:
-        ordering = ['appear_at_second']
-    
-    def __str__(self):
-        return f"Interactive MCQ at {self.appear_at_second}s: {self.question[:50]}..."
-    
-    def get_options(self):
-        return self.options.all()
+    def check_answer(self, user_answer):
+        """Check if user's answer is correct"""
+        if self.question_type == 'mcq_single':
+            return str(user_answer) in [str(ans) for ans in self.correct_answers]
+        elif self.question_type == 'mcq_multiple':
+            # For multiple correct answers, all must be selected
+            user_answers = set(str(ans) for ans in user_answer)
+            correct_answers = set(str(ans) for ans in self.correct_answers)
+            return user_answers == correct_answers
+        elif self.question_type == 'true_false':
+            return str(user_answer).lower() == str(self.correct_answers[0]).lower()
+        # For other types, manual grading required
+        return False
 
 # ==================== ENROLLMENT MODEL ====================
-# In your models.py - add these relationships that are missing:
-
-# Add to Enrollment model if not present:
 class Enrollment(models.Model):
     ENROLLMENT_STATUS = [
         ('pending', 'Pending'),
@@ -644,24 +681,34 @@ class Enrollment(models.Model):
     amount_paid = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
     final_grade = models.CharField(max_length=10, blank=True)
     
-    # Remove these fields that were causing errors:
-    # installment_count = models.IntegerField(default=1)  # REMOVE
-    # is_installment = models.BooleanField(default=False)  # REMOVE
-    # class_time_slot = models.CharField(max_length=100)  # REMOVE
-    # next_installment_date = models.DateField(null=True, blank=True)  # REMOVE
-    
-    # Add these fields to track installments:
-    installment_plan = models.JSONField(default=dict, blank=True)  # Store installment details as JSON
+    # Metadata
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
     
     class Meta:
         unique_together = ['student', 'course']
         ordering = ['-enrolled_at']
     
     def __str__(self):
-        return f"{self.student.full_name} - {self.course.name} ({self.get_enrollment_status_display()})"
+        return f"{self.student.full_name} - {self.course.name}"
     
     def is_active(self):
         return self.enrollment_status == 'active'
+    
+    def calculate_end_date(self):
+        """Calculate end date based on course access duration"""
+        if self.start_date:
+            from datetime import timedelta
+            return self.start_date + timedelta(days=self.course.access_duration_days)
+        return None
+    
+    def time_remaining(self):
+        """Get days remaining until enrollment expires"""
+        if self.end_date:
+            from datetime import date
+            remaining = (self.end_date - date.today()).days
+            return max(0, remaining)
+        return None
     
     def update_progress(self):
         """Update progress percentage"""
@@ -677,15 +724,134 @@ class Enrollment(models.Model):
             completed_lessons = StudentLessonProgress.objects.filter(
                 student=self.student,
                 lesson__module__course=self.course,
-                status='completed'
+                status='completed',
+                enrollment=self
             ).count()
             self.progress_percentage = (completed_lessons / total_lessons) * 100
+        
+        # Update enrollment status based on progress
+        if self.progress_percentage >= 100:
+            self.enrollment_status = 'completed'
+            if not self.completed_at:
+                self.completed_at = timezone.now()
         
         self.save()
         return self.progress_percentage
 
+# ==================== STUDENT COURSE PROGRESS MODEL ====================
+class StudentCourseProgress(models.Model):
+    """Tracks overall progress for a student in a course"""
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    student = models.ForeignKey(Student, on_delete=models.CASCADE, related_name='course_progress')
+    course = models.ForeignKey(Course, on_delete=models.CASCADE, related_name='student_progress')
+    enrollment = models.ForeignKey(Enrollment, on_delete=models.CASCADE, related_name='course_progress', null=True)
+    
+    # Progress tracking
+    overall_progress = models.FloatField(default=0.0)
+    completed_lessons = models.IntegerField(default=0)
+    total_lessons = models.IntegerField(default=0)
+    total_points = models.IntegerField(default=0)
+    
+    # Time tracking
+    total_time_spent = models.IntegerField(default=0)  # in minutes
+    last_accessed = models.DateTimeField(auto_now=True)
+    first_accessed = models.DateTimeField(auto_now_add=True)
+    
+    # Module progress (store as JSON)
+    module_progress = models.JSONField(default=dict, blank=True)
+    
+    # Completion
+    is_completed = models.BooleanField(default=False)
+    completed_at = models.DateTimeField(null=True, blank=True)
+    
+    # Grade
+    final_grade = models.CharField(max_length=10, blank=True)
+    quiz_average = models.FloatField(default=0.0)
+    
+    class Meta:
+        unique_together = ['student', 'course', 'enrollment']
+        verbose_name_plural = 'Student Course Progress'
+    
+    def __str__(self):
+        return f"{self.student.full_name} - {self.course.name} ({self.overall_progress}%)"
+    
+    def update_progress(self):
+        """Update overall progress based on completed lessons"""
+        from django.db.models import Sum
+        
+        # Count total required lessons
+        self.total_lessons = Lesson.objects.filter(
+            module__course=self.course,
+            is_published=True,
+            require_completion=True
+        ).count()
+        
+        # Count completed lessons
+        self.completed_lessons = StudentLessonProgress.objects.filter(
+            student=self.student,
+            lesson__module__course=self.course,
+            status='completed',
+            enrollment=self.enrollment
+        ).count()
+        
+        # Calculate percentage
+        if self.total_lessons > 0:
+            self.overall_progress = (self.completed_lessons / self.total_lessons) * 100
+        
+        # Check if course is completed
+        if self.overall_progress >= 100:
+            self.is_completed = True
+            if not self.completed_at:
+                self.completed_at = timezone.now()
+        
+        # Calculate total points earned
+        self.total_points = StudentLessonProgress.objects.filter(
+            student=self.student,
+            lesson__module__course=self.course,
+            status='completed',
+            enrollment=self.enrollment
+        ).aggregate(total=Sum('points_earned'))['total'] or 0
+        
+        # Calculate module progress
+        modules = Module.objects.filter(course=self.course, is_published=True)
+        module_data = {}
+        for module in modules:
+            total_module_lessons = module.lessons.filter(
+                is_published=True, 
+                require_completion=True
+            ).count()
+            completed_module_lessons = StudentLessonProgress.objects.filter(
+                student=self.student,
+                lesson__module=module,
+                status='completed',
+                enrollment=self.enrollment
+            ).count()
+            
+            module_progress = 0
+            if total_module_lessons > 0:
+                module_progress = (completed_module_lessons / total_module_lessons) * 100
+            
+            module_data[str(module.id)] = {
+                'title': module.title,
+                'progress': module_progress,
+                'completed': completed_module_lessons,
+                'total': total_module_lessons
+            }
+        
+        self.module_progress = module_data
+        self.save()
+        
+        # Update enrollment progress
+        if self.enrollment:
+            self.enrollment.progress_percentage = self.overall_progress
+            if self.is_completed and not self.enrollment.completed_at:
+                self.enrollment.completed_at = self.completed_at
+                self.enrollment.enrollment_status = 'completed'
+            self.enrollment.save()
+        
+        return self.overall_progress
 
-# ==================== STUDENT PROGRESS MODELS ====================
+# ==================== STUDENT LESSON PROGRESS MODEL ====================
 class StudentLessonProgress(models.Model):
     STATUS_CHOICES = [
         ('not_started', 'Not Started'),
@@ -716,24 +882,50 @@ class StudentLessonProgress(models.Model):
     # Attempts
     attempts_count = models.IntegerField(default=0)
     
+    # Metadata
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
     class Meta:
         unique_together = ['student', 'lesson', 'enrollment']
+        ordering = ['lesson__module__order', 'lesson__order']
     
     def __str__(self):
         return f"{self.student.full_name} - {self.lesson.title} ({self.status})"
     
     def mark_as_completed(self, save=True):
+        """Mark lesson as completed"""
         self.status = 'completed'
         self.completed_at = timezone.now()
         if not self.started_at:
             self.started_at = timezone.now()
+        
+        # Award points
+        self.points_earned = self.lesson.points_value
+        
         if save:
             self.save()
         
-        # Update enrollment progress
+        # Update enrollment and course progress
         if self.enrollment:
             self.enrollment.update_progress()
+            
+            # Update StudentCourseProgress
+            course_progress, created = StudentCourseProgress.objects.get_or_create(
+                student=self.student,
+                course=self.lesson.module.course,
+                enrollment=self.enrollment,
+                defaults={
+                    'overall_progress': 0,
+                    'total_lessons': 0,
+                    'completed_lessons': 0
+                }
+            )
+            course_progress.update_progress()
+        
+        return self
 
+# ==================== STUDENT QUIZ ATTEMPT MODEL ====================
 class StudentQuizAttempt(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     student = models.ForeignKey(Student, on_delete=models.CASCADE, related_name='quiz_attempts')
@@ -766,7 +958,7 @@ class StudentQuizAttempt(models.Model):
         unique_together = ['student', 'quiz', 'attempt_number']
     
     def __str__(self):
-        return f"{self.student.full_name} - {self.quiz.title} (Attempt {self.attempt_number})"
+        return f"{self.student.full_name} - {self.quiz} (Attempt {self.attempt_number})"
     
     def calculate_score(self):
         """Calculate final score"""
@@ -784,9 +976,12 @@ class StudentQuizAttempt(models.Model):
             self.score = 0
         
         self.is_passed = self.score >= self.quiz.passing_score
+        self.is_completed = True
+        self.submitted_at = timezone.now()
         self.save()
         return self.score
 
+# ==================== QUIZ RESPONSE MODEL ====================
 class QuizResponse(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     attempt = models.ForeignKey(StudentQuizAttempt, on_delete=models.CASCADE, related_name='responses')
@@ -794,7 +989,6 @@ class QuizResponse(models.Model):
     
     # Response data (store as JSON for flexibility)
     answer_data = models.JSONField(default=dict)
-    selected_options = models.ManyToManyField(QuestionOption, blank=True)
     text_response = models.TextField(blank=True)
     
     # Grading
@@ -809,9 +1003,34 @@ class QuizResponse(models.Model):
         unique_together = ['attempt', 'question']
     
     def __str__(self):
-        return f"Response to Q{self.question.order}"
+        return f"Response to Q{self.question.order} in Attempt {self.attempt.attempt_number}"
+    
+    def grade_response(self):
+        """Grade the response"""
+        if self.question.question_type in ['mcq_single', 'mcq_multiple', 'true_false']:
+            self.is_correct = self.question.check_answer(self.answer_data)
+            if self.is_correct:
+                self.points_earned = self.question.points
+            else:
+                self.points_earned = 0
+        elif self.question.question_type == 'short_answer':
+            # For short answer, auto-grade if exact match is in correct answers
+            user_answer = str(self.text_response).strip().lower()
+            correct_answers = [str(ans).strip().lower() for ans in self.question.correct_answers]
+            self.is_correct = user_answer in correct_answers
+            if self.is_correct:
+                self.points_earned = self.question.points
+            else:
+                self.points_earned = 0
+        else:
+            # Essay and other types require manual grading
+            self.is_correct = False
+            self.points_earned = 0
+        
+        self.save()
+        return self.is_correct
 
-# ==================== PAYMENT MODELS ====================
+# ==================== PAYMENT MODEL ====================
 class Payment(models.Model):
     PAYMENT_METHODS = [
         ('bkash', 'bKash'),
@@ -846,10 +1065,6 @@ class Payment(models.Model):
     status = models.CharField(max_length=20, choices=PAYMENT_STATUS, default='pending')
     is_verified = models.BooleanField(default=False)
     
-    # Installment Info
-    installment_number = models.IntegerField(default=1)
-    total_installments = models.IntegerField(default=1)
-    
     # Metadata
     payment_date = models.DateTimeField(auto_now_add=True)
     verified_at = models.DateTimeField(null=True, blank=True)
@@ -866,6 +1081,7 @@ class Payment(models.Model):
         return f"Payment {self.transaction_id} - ৳{self.amount}"
     
     def verify_payment(self, user=None):
+        """Verify payment and update enrollment"""
         self.is_verified = True
         self.status = 'completed'
         self.verified_at = timezone.now()
@@ -877,11 +1093,21 @@ class Payment(models.Model):
         self.enrollment.payment_status = 'paid'
         self.enrollment.enrollment_status = 'active'
         self.enrollment.start_date = timezone.now().date()
+        self.enrollment.end_date = self.enrollment.calculate_end_date()
+        self.enrollment.amount_paid = self.amount
         self.enrollment.save()
         
         # Update student statistics
-        self.student.total_courses_enrolled += 1
+        self.student.total_courses_enrolled = self.student.enrollments.count()
         self.student.save()
+        
+        # Update course statistics
+        self.enrollment.course.total_enrollments = self.enrollment.course.enrollments.filter(
+            enrollment_status='active'
+        ).count()
+        self.enrollment.course.save()
+        
+        return True
 
 # ==================== CERTIFICATE MODEL ====================
 class Certificate(models.Model):
@@ -949,7 +1175,7 @@ class Certificate(models.Model):
     def get_verification_url(self):
         return f"/verify-certificate/{self.verification_code}/"
 
-# ==================== RESOURCE MODEL ====================
+# ==================== COURSE RESOURCE MODEL ====================
 class CourseResource(models.Model):
     RESOURCE_TYPES = [
         ('pdf', 'PDF Document'),
@@ -966,6 +1192,7 @@ class CourseResource(models.Model):
     
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     course = models.ForeignKey(Course, on_delete=models.CASCADE, related_name='resources')
+    lesson = models.ForeignKey(Lesson, on_delete=models.SET_NULL, null=True, blank=True, related_name='resources')
     
     # Resource details
     title = models.CharField(max_length=200)
@@ -973,7 +1200,7 @@ class CourseResource(models.Model):
     resource_type = models.CharField(max_length=20, choices=RESOURCE_TYPES)
     
     # File or URL
-    file = models.FileField(upload_to='courses/resources/', null=True, blank=True)
+    file = models.FileField(upload_to=resource_file_path, null=True, blank=True)
     url = models.URLField(blank=True)
     
     # Access control
@@ -1002,7 +1229,7 @@ class CourseResource(models.Model):
             return f"{size:.1f} TB"
         return "0 B"
 
-# ==================== REVIEW MODEL ====================
+# ==================== COURSE REVIEW MODEL ====================
 class CourseReview(models.Model):
     RATING_CHOICES = [
         (1, '★☆☆☆☆'),
@@ -1015,7 +1242,7 @@ class CourseReview(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     student = models.ForeignKey(Student, on_delete=models.CASCADE, related_name='reviews')
     course = models.ForeignKey(Course, on_delete=models.CASCADE, related_name='reviews')
-    enrollment = models.ForeignKey(Enrollment, on_delete=models.CASCADE, related_name='reviews', null=True)
+    enrollment = models.ForeignKey(Enrollment, on_delete=models.SET_NULL, null=True, blank=True, related_name='reviews')
     
     # Review content
     rating = models.IntegerField(choices=RATING_CHOICES)
@@ -1123,20 +1350,6 @@ class Coupon(models.Model):
         
         return Decimal(discount)
 
-# ==================== WISHLIST MODEL ====================
-class Wishlist(models.Model):
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    student = models.ForeignKey(Student, on_delete=models.CASCADE, related_name='wishlist')
-    course = models.ForeignKey(Course, on_delete=models.CASCADE, related_name='wishlisted_by')
-    added_at = models.DateTimeField(auto_now_add=True)
-    
-    class Meta:
-        unique_together = ['student', 'course']
-        ordering = ['-added_at']
-    
-    def __str__(self):
-        return f"{self.student.full_name} wishes {self.course.name}"
-
 # ==================== NOTIFICATION MODEL ====================
 class Notification(models.Model):
     TYPES = [
@@ -1182,8 +1395,7 @@ class Notification(models.Model):
         self.read_at = timezone.now()
         self.save()
 
-
-
+# ==================== BLOG POST MODEL ====================
 class BlogPost(models.Model):
     CATEGORIES = [
         ('islamic_knowledge', 'Islamic Knowledge'),
@@ -1206,7 +1418,7 @@ class BlogPost(models.Model):
     tags = models.CharField(max_length=200, blank=True)
     
     # Author
-    author = models.ForeignKey(User, on_delete=models.CASCADE)
+    author = models.ForeignKey(User, on_delete=models.CASCADE, default=None, null=True, blank=True)
     
     # Media
     featured_image = models.ImageField(upload_to='blog_images/', null=True, blank=True)
@@ -1233,6 +1445,14 @@ class BlogPost(models.Model):
         ordering = ['-published_at', '-created_at']
     
     def save(self, *args, **kwargs):
+        if not self.slug:
+            base_slug = slugify(self.title)
+            slug = base_slug
+            counter = 1
+            while BlogPost.objects.filter(slug=slug).exists():
+                slug = f"{base_slug}-{counter}"
+                counter += 1
+            self.slug = slug
         if self.is_published and not self.published_at:
             self.published_at = timezone.now()
         super().save(*args, **kwargs)
@@ -1240,6 +1460,7 @@ class BlogPost(models.Model):
     def __str__(self):
         return self.title
 
+# ==================== GALLERY MODEL ====================
 class Gallery(models.Model):
     CATEGORIES = [
         ('classroom', 'Classroom Sessions'),
@@ -1272,6 +1493,7 @@ class Gallery(models.Model):
     def __str__(self):
         return self.title
 
+# ==================== DONATION MODEL ====================
 class Donation(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     
@@ -1306,6 +1528,7 @@ class Donation(models.Model):
     def __str__(self):
         return f"Donation from {self.donor_name} - {self.amount} BDT"
 
+# ==================== FAQ MODEL ====================
 class FAQ(models.Model):
     CATEGORIES = [
         ('admission', 'Admission & Enrollment'),
@@ -1339,32 +1562,7 @@ class FAQ(models.Model):
     def __str__(self):
         return self.question[:100]
 
-class Office(models.Model):
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    
-    # Office Details
-    name = models.CharField(max_length=200)
-    address = models.TextField()
-    city = models.CharField(max_length=100)
-    phone = models.CharField(max_length=20)
-    email = models.EmailField(blank=True)
-    
-    # Location
-    latitude = models.FloatField(null=True, blank=True)
-    longitude = models.FloatField(null=True, blank=True)
-    
-    # Status
-    is_main_office = models.BooleanField(default=False)
-    is_active = models.BooleanField(default=True)
-    
-    # Office Hours
-    opening_hours = models.CharField(max_length=200, blank=True)
-    
-    def __str__(self):
-        return f"{self.name} - {self.city}"
-
-   
-# Add to your existing models.py
+# ==================== CONTACT MESSAGE MODEL ====================
 class ContactMessage(models.Model):
     SUBJECT_CHOICES = [
         ('general', 'General Inquiry'),
@@ -1383,6 +1581,13 @@ class ContactMessage(models.Model):
         ('closed', 'Closed'),
     ]
     
+    PRIORITY_CHOICES = [
+        ('low', 'Low'),
+        ('normal', 'Normal'),
+        ('high', 'High'),
+        ('urgent', 'Urgent'),
+    ]
+    
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     
     # Sender Information
@@ -1399,6 +1604,7 @@ class ContactMessage(models.Model):
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='new')
     is_read = models.BooleanField(default=False)
     is_important = models.BooleanField(default=False)
+    priority = models.CharField(max_length=20, choices=PRIORITY_CHOICES, default='normal')
     
     # Metadata
     received_at = models.DateTimeField(auto_now_add=True)
@@ -1411,16 +1617,7 @@ class ContactMessage(models.Model):
     responded_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
     responded_at = models.DateTimeField(null=True, blank=True)
     
-    # Priority
-    PRIORITY_CHOICES = [
-        ('low', 'Low'),
-        ('normal', 'Normal'),
-        ('high', 'High'),
-        ('urgent', 'Urgent'),
-    ]
-    priority = models.CharField(max_length=20, choices=PRIORITY_CHOICES, default='normal')
-    
-    # Related Objects (if applicable)
+    # Related Objects
     student = models.ForeignKey(Student, on_delete=models.SET_NULL, null=True, blank=True)
     course = models.ForeignKey(Course, on_delete=models.SET_NULL, null=True, blank=True)
     enrollment = models.ForeignKey(Enrollment, on_delete=models.SET_NULL, null=True, blank=True)
@@ -1430,7 +1627,10 @@ class ContactMessage(models.Model):
         verbose_name = 'Contact Message'
         verbose_name_plural = 'Contact Messages'
     
-    def mark_as_read(self, user=None):
+    def __str__(self):
+        return f"{self.name} - {self.subject} ({self.get_status_display()})"
+    
+    def mark_as_read(self):
         self.is_read = True
         self.read_at = timezone.now()
         self.save()
@@ -1494,11 +1694,5 @@ Contact: +8801740433580''',
             return f"{minutes} minute{'s' if minutes != 1 else ''} ago"
         else:
             return "Just now"
-    
-    def __str__(self):
-        return f"{self.name} - {self.subject} ({self.get_status_display()})"
 
-
-
-
-
+            

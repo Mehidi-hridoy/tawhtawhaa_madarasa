@@ -13,87 +13,1215 @@ from django.urls import reverse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST, require_GET
 import json
+from django.db.models import Prefetch
 import uuid
+# Add to views.py
+from django.contrib.auth.forms import PasswordChangeForm
+from django.contrib.auth import update_session_auth_hash
 from decimal import Decimal
 from .models import *
 from .forms import *
 from django.contrib.auth.decorators import user_passes_test
-from django.contrib.auth import update_session_auth_hash
-from django.contrib.auth.forms import PasswordChangeForm
 import random
 import string
+from django.http import HttpResponse
+from django.contrib.auth.decorators import login_required
+
 
 
 def home(request):
-    """Home page with featured content"""
-    # Featured courses (8 courses)
+    """Home page view"""
+    # Featured courses
     featured_courses = Course.objects.filter(
-        is_active=True, 
-        is_featured=True,
-        is_approved=True
-    ).order_by('-created_at')[:8]
-    
-    # New courses (6 courses)
-    new_courses = Course.objects.filter(
-        is_active=True,
-        is_approved=True
-    ).order_by('-created_at')[:6]
-    
-    # Free courses (6 courses)
-    free_courses = Course.objects.filter(
         is_active=True,
         is_approved=True,
-        price_type='free'
+        is_featured=True
+    ).order_by('-created_at')[:8]
+    
+    # Popular courses (by enrollments)
+    popular_courses = Course.objects.filter(
+        is_active=True,
+        is_approved=True
+    ).annotate(
+        enroll_count=Count('enrollments')
+    ).order_by('-enroll_count')[:8]
+    
+    # New courses
+    new_courses = Course.objects.filter(
+        is_active=True,
+        is_approved=True,
+        created_at__gte=timezone.now() - timedelta(days=30)
     ).order_by('-created_at')[:6]
     
-    # Top categories with course count
-    categories = Category.objects.filter(
-        is_active=True,
-        parent__isnull=True
-    ).annotate(
-        course_count=Count('courses', filter=Q(courses__is_active=True, courses__is_approved=True))
-    ).order_by('-course_count')[:8]
-    
-    # Top instructors with course count
+    # Top instructors
     top_instructors = Instructor.objects.filter(
-        is_active=True,
-        is_verified=True
+        is_active=True
     ).annotate(
         course_count=Count('instructor_courses', filter=Q(instructor_courses__course__is_active=True))
-    ).order_by('-course_count')[:6]
-    
-    # Latest testimonials/reviews
-    testimonials = CourseReview.objects.filter(
-        is_published=True
-    ).select_related('student', 'course').order_by('-created_at')[:3]
+    ).filter(course_count__gt=0).order_by('-course_count')[:4]
     
     # Latest blog posts
-    recent_posts = BlogPost.objects.filter(
+    latest_posts = BlogPost.objects.filter(
         is_published=True
-    ).order_by('-published_at')[:3]
+    ).order_by('-published_at', '-created_at')[:3]
     
-    # Statistics for the hero section
-    stats = {
-        'total_students': Student.objects.filter(is_active=True).count(),
-        'active_courses': Course.objects.filter(is_active=True, is_approved=True).count(),
-        'successful_completions': Certificate.objects.filter(is_verified=True).count(),
-        'total_enrollments': Enrollment.objects.filter(enrollment_status='active').count(),
-    }
+    # Testimonials
+    testimonials = CourseReview.objects.filter(
+        is_published=True,
+        rating__gte=4
+    ).select_related('student', 'course').order_by('-created_at')[:4]
+    
+    # Categories
+    categories = Category.objects.filter(
+        is_active=True
+    ).annotate(
+        course_count=Count('courses', filter=Q(courses__is_active=True, courses__is_approved=True))
+    ).filter(course_count__gt=0).order_by('-display_order', 'name')[:8]
     
     context = {
         'featured_courses': featured_courses,
+        'popular_courses': popular_courses,
         'new_courses': new_courses,
-        'free_courses': free_courses,
-        'categories': categories,
         'top_instructors': top_instructors,
+        'latest_posts': latest_posts,
         'testimonials': testimonials,
-        'recent_posts': recent_posts,
-        'stats': stats,
-        'title': 'Taw Haa Zin Nurain - Online Islamic Madrassa'
+        'categories': categories,
+        'page_title': 'Home - Islamic Online Learning Platform',
     }
+    
     return render(request, 'core/home.html', context)
 
+def course_list(request):
+    """List all courses with filtering"""
+    courses = Course.objects.filter(
+        is_active=True,
+        is_approved=True
+    ).select_related('category')
     
+    # Apply filters
+    category_slug = request.GET.get('category', '')
+    level = request.GET.get('level', '')
+    price = request.GET.get('price', '')
+    rating = request.GET.get('rating', '')
+    search = request.GET.get('q', '')
+    sort = request.GET.get('sort', 'newest')
+    
+    # Search filter
+    if search:
+        courses = courses.filter(
+            Q(name__icontains=search) |
+            Q(short_description__icontains=search) |
+            Q(description__icontains=search) |
+            Q(category__name__icontains=search)
+        )
+    
+    # Category filter
+    if category_slug:
+        courses = courses.filter(category__slug=category_slug)
+    
+    # Level filter
+    if level:
+        courses = courses.filter(level=level)
+    
+    # Price filter
+    if price == 'free':
+        courses = courses.filter(price_type='free')
+    elif price == 'paid':
+        courses = courses.filter(price_type__in=['paid', 'subscription'])
+    
+    # Rating filter
+    if rating:
+        try:
+            min_rating = float(rating)
+            courses = courses.filter(average_rating__gte=min_rating)
+        except:
+            pass
+    
+    # Sorting
+    if sort == 'popular':
+        courses = courses.order_by('-total_enrollments', '-average_rating')
+    elif sort == 'rating':
+        courses = courses.order_by('-average_rating', '-total_enrollments')
+    elif sort == 'price_low':
+        courses = courses.order_by('base_price')
+    elif sort == 'price_high':
+        courses = courses.order_by('-base_price')
+    elif sort == 'featured':
+        courses = courses.filter(is_featured=True).order_by('-created_at')
+    else:  # newest
+        courses = courses.order_by('-created_at')
+    
+    # Get categories for filter sidebar
+    categories = Category.objects.filter(
+        is_active=True
+    ).annotate(
+        course_count=Count('courses', filter=Q(courses__is_active=True))
+    ).filter(course_count__gt=0).order_by('display_order', 'name')
+    
+    # Pagination
+    paginator = Paginator(courses, 12)
+    page = request.GET.get('page', 1)
+    courses_page = paginator.get_page(page)
+    
+    context = {
+        'courses': courses_page,
+        'categories': categories,
+        'selected_category': category_slug,
+        'selected_level': level,
+        'selected_price': price,
+        'selected_rating': rating,
+        'selected_sort': sort,
+        'search_query': search,
+        'page_title': 'Browse Courses',
+    }
+    
+    return render(request, 'courses/browse.html', context)
+
+def courses(request):
+    """Browse all courses with filtering"""
+    # Get all active courses
+    courses_list = Course.objects.filter(
+        is_active=True,
+        is_approved=True
+    ).select_related('category').prefetch_related('course_instructors__instructor')
+    
+    # Get filter parameters
+    category_slug = request.GET.get('category', '')
+    level = request.GET.get('level', '')
+    price_type = request.GET.get('price', '')
+    rating = request.GET.get('rating', '')
+    search_query = request.GET.get('q', '')
+    sort_by = request.GET.get('sort', 'newest')
+    
+    # Apply search filter
+    if search_query:
+        courses_list = courses_list.filter(
+            Q(name__icontains=search_query) |
+            Q(short_description__icontains=search_query) |
+            Q(description__icontains=search_query) |
+            Q(category__name__icontains=search_query)
+        )
+    
+    # Apply category filter
+    if category_slug:
+        courses_list = courses_list.filter(category__slug=category_slug)
+    
+    # Apply level filter
+    if level:
+        courses_list = courses_list.filter(level=level)
+    
+    # Apply price filter
+    if price_type == 'free':
+        courses_list = courses_list.filter(price_type='free')
+    elif price_type == 'paid':
+        courses_list = courses_list.filter(price_type__in=['paid', 'subscription'])
+    
+    # Apply rating filter
+    if rating:
+        try:
+            min_rating = float(rating)
+            courses_list = courses_list.filter(average_rating__gte=min_rating)
+        except:
+            pass
+    
+    # Apply sorting
+    if sort_by == 'popular':
+        courses_list = courses_list.order_by('-total_enrollments', '-average_rating')
+    elif sort_by == 'rating':
+        courses_list = courses_list.order_by('-average_rating', '-total_enrollments')
+    elif sort_by == 'price_low':
+        courses_list = courses_list.order_by('base_price', '-average_rating')
+    elif sort_by == 'price_high':
+        courses_list = courses_list.order_by('-base_price', '-average_rating')
+    elif sort_by == 'featured':
+        courses_list = courses_list.filter(is_featured=True).order_by('-created_at')
+    else:  # newest
+        courses_list = courses_list.order_by('-created_at')
+    
+    # Get all categories for filter sidebar
+    categories = Category.objects.filter(
+        is_active=True
+    ).annotate(
+        course_count=Count('courses', filter=Q(courses__is_active=True, courses__is_approved=True))
+    ).filter(course_count__gt=0).order_by('display_order', 'name')
+    
+    # Get selected category
+    selected_category = None
+    if category_slug:
+        selected_category = get_object_or_404(Category, slug=category_slug, is_active=True)
+    
+    # Pagination
+    paginator = Paginator(courses_list, 12)  # 12 courses per page
+    page_number = request.GET.get('page', 1)
+    courses_page = paginator.get_page(page_number)
+    
+    # Get filter counts for sidebar
+    free_courses_count = Course.objects.filter(
+        is_active=True, is_approved=True, price_type='free'
+    ).count()
+    paid_courses_count = Course.objects.filter(
+        is_active=True, is_approved=True, price_type__in=['paid', 'subscription']
+    ).count()
+    
+    # Get level counts
+    level_counts = {
+        'beginner': Course.objects.filter(is_active=True, is_approved=True, level='beginner').count(),
+        'intermediate': Course.objects.filter(is_active=True, is_approved=True, level='intermediate').count(),
+        'advanced': Course.objects.filter(is_active=True, is_approved=True, level='advanced').count(),
+        'all': Course.objects.filter(is_active=True, is_approved=True, level='all').count(),
+    }
+    
+    # Get rating counts
+    rating_counts = {}
+    for i in range(1, 6):
+        rating_counts[str(i)] = Course.objects.filter(
+            is_active=True, is_approved=True, average_rating__gte=i
+        ).count()
+    
+    context = {
+        'courses': courses_page,
+        'categories': categories,
+        'selected_category': selected_category,
+        'selected_level': level,
+        'selected_price': price_type,
+        'selected_rating': rating,
+        'selected_sort': sort_by,
+        'search_query': search_query,
+        'free_courses_count': free_courses_count,
+        'paid_courses_count': paid_courses_count,
+        'level_counts': level_counts,
+        'rating_counts': rating_counts,
+        'title': 'Browse All Courses',
+        'total_courses': courses_list.count(),
+    }
+    
+    return render(request, 'courses/browse.html', context)
+
+
+
+
+def course_detail(request, slug):
+    """Course detail page"""
+    course = get_object_or_404(
+        Course.objects.select_related('category')
+                     .prefetch_related('modules', 'course_instructors__instructor'),
+        slug=slug,
+        is_active=True,
+        is_approved=True
+    )
+    
+    # Get related courses
+    related_courses = Course.objects.filter(
+        category=course.category,
+        is_active=True,
+        is_approved=True
+    ).exclude(id=course.id).order_by('-created_at')[:4]
+    
+    # Get reviews
+    reviews = CourseReview.objects.filter(
+        course=course,
+        is_published=True
+    ).select_related('student').order_by('-created_at')
+    
+    # Check enrollment status
+    is_enrolled = False
+    enrollment_status = None
+    payment_status = None
+    
+    if request.user.is_authenticated and hasattr(request.user, 'student_profile'):
+        enrollment = Enrollment.objects.filter(
+            student=request.user.student_profile,
+            course=course
+        ).first()
+        
+        if enrollment:
+            is_enrolled = True
+            enrollment_status = enrollment.enrollment_status
+            payment_status = enrollment.payment_status
+    
+    # Check for coupon in URL
+    coupon_code = request.GET.get('coupon', '')
+    coupon_valid = False
+    discount_amount = Decimal('0.00')
+    final_price = course.get_current_price()
+    
+    if coupon_code:
+        try:
+            coupon = Coupon.objects.get(code=coupon_code, is_active=True)
+            is_valid, message = coupon.is_valid(request.user, course)
+            if is_valid:
+                coupon_valid = True
+                discount_amount = coupon.calculate_discount(course.get_current_price())
+                final_price = course.get_current_price() - discount_amount
+        except Coupon.DoesNotExist:
+            pass
+    
+    context = {
+        'course': course,
+        'related_courses': related_courses,
+        'reviews': reviews,
+        'is_enrolled': is_enrolled,
+        'enrollment_status': enrollment_status,
+        'payment_status': payment_status,
+        'coupon_code': coupon_code,
+        'coupon_valid': coupon_valid,
+        'discount_amount': discount_amount,
+        'final_price': final_price,
+        'page_title': f'{course.name} - Course Details',
+    }
+    
+    return render(request, 'courses/detail.html', context)
+
+
+@login_required
+def enroll_course(request, slug):
+    """Enroll a student in a course"""
+    course = get_object_or_404(Course, slug=slug, is_active=True, is_approved=True)
+    student = request.user.student_profile
+    
+    # Check if already enrolled
+    existing_enrollment = Enrollment.objects.filter(
+        student=student,
+        course=course
+    ).first()
+    
+    if existing_enrollment:
+        if existing_enrollment.enrollment_status == 'active':
+            messages.info(request, f'You are already enrolled in "{course.name}"')
+            return redirect('core:course_learn', slug=slug)
+        else:
+            # Reactivate enrollment
+            existing_enrollment.enrollment_status = 'active'
+            existing_enrollment.save()
+            messages.success(request, f'Re-enrolled in "{course.name}"')
+            return redirect('core:course_learn', slug=slug)
+    
+    # Create new enrollment
+    enrollment = Enrollment.objects.create(
+        student=student,
+        course=course,
+        enrollment_status='pending',  # Will be active after payment if needed
+        start_date=timezone.now().date(),
+        end_date=timezone.now().date() + timezone.timedelta(days=course.access_duration_days)
+    )
+    
+    # Handle payment for paid courses
+    if course.price_type != 'free' and course.get_current_price() > 0:
+        # Create pending payment
+        payment = Payment.objects.create(
+            enrollment=enrollment,
+            student=student,
+            amount=course.get_current_price(),
+            payment_method='pending',
+            transaction_id=f"ENR-{enrollment.id}-{timezone.now().strftime('%Y%m%d%H%M%S')}",
+            status='pending'
+        )
+        
+        messages.info(request, f'Please complete payment to enroll in "{course.name}"')
+        return redirect('core:payment_process', payment_id=payment.id)
+    
+    # For free courses, activate immediately
+    enrollment.enrollment_status = 'active'
+    enrollment.payment_status = 'paid'
+    enrollment.save()
+    
+    # Update student statistics
+    student.total_courses_enrolled = student.enrollments.count()
+    student.save()
+    
+    # Update course statistics
+    course.total_enrollments += 1
+    course.save()
+    
+    messages.success(request, f'Successfully enrolled in "{course.name}"!')
+    return redirect('core:course_learn', slug=slug)
+
+@login_required
+def course_learn(request, slug):
+    """Course learning page"""
+    course = get_object_or_404(Course, slug=slug, is_active=True, is_approved=True)
+    student = request.user.student_profile
+    
+    # Check if enrolled
+    enrollment = Enrollment.objects.filter(
+        student=student,
+        course=course,
+        enrollment_status='active'
+    ).first()
+    
+    if not enrollment:
+        messages.warning(request, 'You need to enroll in this course first')
+        return redirect('core:course_detail', slug=slug)
+    
+    # Get first module and lesson
+    first_module = course.modules.filter(is_published=True).order_by('order').first()
+    first_lesson = None
+    if first_module:
+        first_lesson = first_module.lessons.filter(is_published=True).order_by('order').first()
+    
+    context = {
+        'course': course,
+        'enrollment': enrollment,
+        'first_module': first_module,
+        'first_lesson': first_lesson,
+        'page_title': f'Learning: {course.name}',
+    }
+    
+    return render(request, 'courses/learn.html', context)
+
+@login_required
+def payment_process(request, payment_id):
+    """Payment processing page"""
+    payment = get_object_or_404(Payment, id=payment_id, student=request.user.student_profile)
+    
+    if request.method == 'POST':
+        # Process payment (simplified)
+        payment_method = request.POST.get('payment_method')
+        transaction_id = request.POST.get('transaction_id')
+        
+        if payment_method and transaction_id:
+            payment.payment_method = payment_method
+            payment.gateway_transaction_id = transaction_id
+            payment.status = 'completed'
+            payment.is_verified = True
+            payment.verified_at = timezone.now()
+            payment.save()
+            
+            # Update enrollment
+            payment.enrollment.enrollment_status = 'active'
+            payment.enrollment.payment_status = 'paid'
+            payment.enrollment.save()
+            
+            messages.success(request, 'Payment successful! You are now enrolled in the course.')
+            return redirect('core:course_learn', slug=payment.enrollment.course.slug)
+    
+    context = {
+        'payment': payment,
+        'page_title': 'Complete Payment',
+    }
+    
+    return render(request, 'courses/payment.html', context)
+
+def instructor_list(request):
+    """List all instructors"""
+    instructors = Instructor.objects.filter(
+        is_active=True
+    ).annotate(
+        course_count=Count('instructor_courses', filter=Q(instructor_courses__course__is_active=True))
+    ).order_by('-course_count')
+    
+    # Pagination
+    paginator = Paginator(instructors, 12)
+    page = request.GET.get('page', 1)
+    instructors_page = paginator.get_page(page)
+    
+    context = {
+        'instructors': instructors_page,
+        'page_title': 'Our Instructors',
+    }
+    
+    return render(request, 'instructors/list.html', context)
+
+def blog_list(request):
+    """List all blog posts"""
+    posts = BlogPost.objects.filter(
+        is_published=True
+    ).order_by('-published_at', '-created_at')
+    
+    # Categories for filter
+    categories = BlogPost.objects.filter(
+        is_published=True
+    ).values_list('category', flat=True).distinct()
+    
+    # Pagination
+    paginator = Paginator(posts, 9)
+    page = request.GET.get('page', 1)
+    posts_page = paginator.get_page(page)
+    
+    context = {
+        'posts': posts_page,
+        'categories': categories,
+        'page_title': 'Islamic Blog & Articles',
+    }
+    
+    return render(request, 'blog/list.html', context)
+
+def blog_detail(request, slug):
+    """Blog post detail"""
+    post = get_object_or_404(
+        BlogPost.objects.select_related('author'),
+        slug=slug,
+        is_published=True
+    )
+    
+    # Increment views
+    post.views += 1
+    post.save()
+    
+    # Related posts
+    related_posts = BlogPost.objects.filter(
+        category=post.category,
+        is_published=True
+    ).exclude(id=post.id).order_by('-published_at')[:3]
+    
+    context = {
+        'post': post,
+        'related_posts': related_posts,
+        'page_title': post.title,
+    }
+    
+    return render(request, 'blog/detail.html', context)
+
+
+def search(request):
+    """Search courses, blog posts, and instructors"""
+    query = request.GET.get('q', '').strip()
+    search_type = request.GET.get('type', 'courses')
+    
+    results = {
+        'courses': [],
+        'blog_posts': [],
+        'instructors': [],
+        'total_results': 0,
+    }
+    
+    if query:
+        # Search courses
+        if search_type in ['courses', 'all']:
+            courses = Course.objects.filter(
+                Q(name__icontains=query) |
+                Q(short_description__icontains=query) |
+                Q(description__icontains=query) |
+                Q(category__name__icontains=query) |
+                Q(course_instructors__instructor__full_name__icontains=query),
+                is_active=True,
+                is_approved=True
+            ).distinct().select_related('category').order_by('-created_at')
+            results['courses'] = courses
+        
+        # Search blog posts
+        if search_type in ['blog', 'all']:
+            blog_posts = BlogPost.objects.filter(
+                Q(title__icontains=query) |
+                Q(content__icontains=query) |
+                Q(excerpt__icontains=query),
+                is_published=True
+            ).distinct().order_by('-published_at')
+            results['blog_posts'] = blog_posts
+        
+        # Search instructors
+        if search_type in ['instructors', 'all']:
+            instructors = Instructor.objects.filter(
+                Q(full_name__icontains=query) |
+                Q(bio__icontains=query) |
+                Q(specialization__icontains=query) |
+                Q(qualifications__icontains=query),
+                is_active=True
+            ).distinct().order_by('-created_at')
+            results['instructors'] = instructors
+        
+        # Calculate total results
+        results['total_results'] = (
+            len(results['courses']) + 
+            len(results['blog_posts']) + 
+            len(results['instructors'])
+        )
+    
+    # Pagination for courses
+    courses_paginator = Paginator(results['courses'], 12)
+    courses_page = request.GET.get('courses_page', 1)
+    results['courses_page'] = courses_paginator.get_page(courses_page)
+    
+    # Pagination for blog posts
+    blog_paginator = Paginator(results['blog_posts'], 9)
+    blog_page = request.GET.get('blog_page', 1)
+    results['blog_posts_page'] = blog_paginator.get_page(blog_page)
+    
+    # Pagination for instructors
+    instructors_paginator = Paginator(results['instructors'], 12)
+    instructors_page = request.GET.get('instructors_page', 1)
+    results['instructors_page'] = instructors_paginator.get_page(instructors_page)
+    
+    # Get all categories for sidebar
+    categories = Category.objects.filter(
+        is_active=True
+    ).annotate(
+        course_count=models.Count('courses', filter=Q(courses__is_active=True))
+    ).filter(course_count__gt=0).order_by('display_order', 'name')
+    
+    context = {
+        'query': query,
+        'search_type': search_type,
+        'results': results,
+        'categories': categories,
+        'page_title': f'Search: {query}' if query else 'Search',
+    }
+    
+    return render(request, 'core/search.html', context)
+
+
+# ==================== PAYMENT & ENROLLMENT SYSTEM ====================
+
+@login_required
+def initiate_payment(request, slug):
+    """Initiate payment process for a course"""
+    course = get_object_or_404(
+        Course.objects.select_related('category'),
+        slug=slug,
+        is_active=True,
+        is_approved=True
+    )
+    
+    # Check if user has student profile
+    if not hasattr(request.user, 'student_profile'):
+        messages.error(request, 'Student profile not found. Please complete your profile.')
+        return redirect('core:profile')
+    
+    student = request.user.student_profile
+    
+    # Check if already enrolled
+    existing_enrollment = Enrollment.objects.filter(
+        student=student,
+        course=course
+    ).first()
+    
+    if existing_enrollment:
+        if existing_enrollment.enrollment_status == 'active':
+            messages.info(request, 'You are already enrolled in this course.')
+            return redirect('core:course_learn', slug=slug)
+        elif existing_enrollment.payment_status == 'paid':
+            messages.info(request, 'Payment already completed for this course.')
+            return redirect('core:course_learn', slug=slug)
+    
+    # For free courses, enroll directly
+    if course.is_free():
+        # Create enrollment
+        enrollment, created = Enrollment.objects.get_or_create(
+            student=student,
+            course=course,
+            defaults={
+                'enrollment_status': 'active',
+                'payment_status': 'free',
+                'start_date': timezone.now().date(),
+                'end_date': timezone.now().date() + timezone.timedelta(days=course.access_duration_days),
+                'amount_paid': 0
+            }
+        )
+        
+        if not created:
+            enrollment.enrollment_status = 'active'
+            enrollment.payment_status = 'free'
+            enrollment.save()
+        
+        messages.success(request, f'Successfully enrolled in {course.name}!')
+        return redirect('core:course_learn', slug=slug)
+    
+    # Check coupon from URL
+    coupon_code = request.GET.get('coupon', '')
+    coupon = None
+    discount_amount = Decimal('0.00')
+    
+    if coupon_code:
+        try:
+            coupon = Coupon.objects.get(code=coupon_code, is_active=True)
+            is_valid, message = coupon.is_valid(request.user, course)
+            if is_valid:
+                discount_amount = coupon.calculate_discount(course.get_current_price())
+                messages.success(request, f'Coupon applied! Discount: ৳{discount_amount}')
+            else:
+                messages.warning(request, message)
+                coupon = None
+        except Coupon.DoesNotExist:
+            messages.error(request, 'Invalid coupon code.')
+    
+    # Calculate final price
+    original_price = course.get_current_price()
+    final_price = original_price - discount_amount
+    
+    # Create or get enrollment
+    enrollment, created = Enrollment.objects.get_or_create(
+        student=student,
+        course=course,
+        defaults={
+            'enrollment_status': 'pending',
+            'payment_status': 'pending',
+            'amount_paid': 0
+        }
+    )
+    
+    if not created and enrollment.payment_status == 'paid':
+        messages.info(request, 'Payment already completed.')
+        return redirect('core:course_learn', slug=slug)
+    
+    # Create payment record
+    payment = Payment.objects.create(
+        enrollment=enrollment,
+        student=student,
+        amount=final_price,
+        payment_method='pending',
+        transaction_id=f'PAY-{uuid.uuid4().hex[:12].upper()}',
+        status='pending',
+        gateway_response={
+            'original_price': float(original_price),
+            'discount_amount': float(discount_amount),
+            'coupon_code': coupon_code if coupon else '',
+            'course_slug': slug
+        }
+    )
+    
+    # Store payment ID in session for redirect
+    request.session['current_payment_id'] = str(payment.id)
+    
+    return redirect('core:payment_method_selection', payment_id=payment.id)
+
+@login_required
+def payment_method_selection(request, payment_id):
+    """Select payment method"""
+    payment = get_object_or_404(
+        Payment.objects.select_related('enrollment__course', 'student'),
+        id=payment_id,
+        student=request.user.student_profile
+    )
+    
+    # Check if payment is already completed
+    if payment.status == 'completed':
+        messages.info(request, 'Payment already completed.')
+        return redirect('core:course_learn', slug=payment.enrollment.course.slug)
+    
+    if request.method == 'POST':
+        payment_method = request.POST.get('payment_method')
+        if payment_method:
+            payment.payment_method = payment_method
+            payment.save()
+            return redirect('core:payment_instructions', payment_id=payment.id)
+    
+    context = {
+        'payment': payment,
+        'page_title': 'Select Payment Method',
+    }
+    
+    return render(request, 'payment/method_selection.html', context)
+
+@login_required
+def payment_instructions(request, payment_id):
+    """Show payment instructions based on selected method"""
+    payment = get_object_or_404(
+        Payment.objects.select_related('enrollment__course', 'student'),
+        id=payment_id,
+        student=request.user.student_profile
+    )
+    
+    # Generate instructions based on payment method
+    payment_details = get_payment_instructions(payment)
+    
+    context = {
+        'payment': payment,
+        'payment_details': payment_details,
+        'page_title': 'Payment Instructions',
+    }
+    
+    return render(request, 'payment/instructions.html', context)
+
+def get_payment_instructions(payment):
+    """Generate payment instructions based on method"""
+    if payment.payment_method == 'bkash':
+        return {
+            'method_name': 'bKash',
+            'icon': 'fas fa-mobile-alt',
+            'icon_color': '#E2136E',
+            'account_number': '01740433580',
+            'account_name': 'Taw Haa Zin Nurain Madarasa',
+            'amount': payment.amount,
+            'reference': payment.transaction_id,
+            'instructions': [
+                'Go to your bKash mobile menu',
+                'Choose "Send Money"',
+                f'Enter bKash Account: 01740433580',
+                f'Enter Amount: ৳{payment.amount}',
+                f'Enter Reference: {payment.transaction_id}',
+                'Enter your bKash PIN',
+                'Take screenshot of confirmation',
+                'Click "Verify Payment" below'
+            ]
+        }
+    elif payment.payment_method == 'nagad':
+        return {
+            'method_name': 'Nagad',
+            'icon': 'fas fa-wallet',
+            'icon_color': '#F8A61F',
+            'account_number': '01740433580',
+            'account_name': 'Taw Haa Zin Nurain Madarasa',
+            'amount': payment.amount,
+            'reference': payment.transaction_id,
+            'instructions': [
+                'Go to your Nagad mobile menu',
+                'Choose "Send Money"',
+                f'Enter Nagad Account: 01740433580',
+                f'Enter Amount: ৳{payment.amount}',
+                f'Enter Reference: {payment.transaction_id}',
+                'Enter your Nagad PIN',
+                'Take screenshot of confirmation',
+                'Click "Verify Payment" below'
+            ]
+        }
+    elif payment.payment_method == 'bank':
+        return {
+            'method_name': 'Bank Transfer',
+            'icon': 'fas fa-university',
+            'icon_color': '#27ae60',
+            'account_number': '1234567890123',
+            'account_name': 'Taw Haa Zin Nurain Online Madarasa',
+            'bank_name': 'Islami Bank Bangladesh Ltd',
+            'branch': 'Gulshan Branch, Dhaka',
+            'amount': payment.amount,
+            'reference': payment.transaction_id,
+            'instructions': [
+                f'Bank: Islami Bank Bangladesh Ltd',
+                f'Account Name: Taw Haa Zin Nurain Online Madarasa',
+                f'Account Number: 1234567890123',
+                f'Branch: Gulshan Branch, Dhaka',
+                f'Transfer Amount: ৳{payment.amount}',
+                f'Reference: {payment.transaction_id}',
+                'Upload transfer receipt below'
+            ]
+        }
+    elif payment.payment_method == 'rocket':
+        return {
+            'method_name': 'Rocket',
+            'icon': 'fas fa-bolt',
+            'icon_color': '#5D2C8E',
+            'account_number': '017404335801',
+            'account_name': 'Taw Haa Zin Nurain Madarasa',
+            'amount': payment.amount,
+            'reference': payment.transaction_id,
+            'instructions': [
+                'Go to your Rocket/DBBL mobile menu',
+                'Choose "Send Money"',
+                f'Enter Rocket Account: 017404335801',
+                f'Enter Amount: ৳{payment.amount}',
+                f'Enter Reference: {payment.transaction_id}',
+                'Enter your Rocket PIN',
+                'Take screenshot of confirmation',
+                'Click "Verify Payment" below'
+            ]
+        }
+    
+    return None
+
+@login_required
+def payment_verification(request, payment_id):
+    """Submit payment verification"""
+    payment = get_object_or_404(
+        Payment.objects.select_related('enrollment__course', 'student'),
+        id=payment_id,
+        student=request.user.student_profile
+    )
+    
+    if payment.status == 'completed':
+        messages.info(request, 'Payment already verified.')
+        return redirect('core:course_learn', slug=payment.enrollment.course.slug)
+    
+    if request.method == 'POST':
+        transaction_id = request.POST.get('transaction_id', '').strip()
+        notes = request.POST.get('notes', '').strip()
+        
+        if transaction_id:
+            payment.gateway_transaction_id = transaction_id
+            payment.notes = notes
+            payment.status = 'processing'
+            
+            # Handle file upload if provided
+            if 'screenshot' in request.FILES:
+                screenshot = request.FILES['screenshot']
+                # You'll need to add a screenshot field to Payment model
+                # For now, store filename in notes
+                payment.notes += f'\nScreenshot: {screenshot.name}'
+            
+            payment.save()
+            
+            # Send notification to admin
+            try:
+                send_mail(
+                    subject=f'Payment Verification Required - {payment.transaction_id}',
+                    message=f'''Student: {payment.student.full_name}
+Course: {payment.enrollment.course.name}
+Amount: ৳{payment.amount}
+Transaction ID: {transaction_id}
+Payment Method: {payment.get_payment_method_display()}
+Notes: {notes}
+
+Please verify this payment in the admin panel.''',
+                    from_email=settings.DEFAULT_FROM_EMAIL,
+                    recipient_list=[settings.ADMIN_EMAIL],
+                    fail_silently=True,
+                )
+            except:
+                pass
+            
+            messages.success(request, 
+                'Payment verification submitted! We will review it within 24 hours and activate your course.'
+            )
+            return redirect('core:dashboard')
+    
+    context = {
+        'payment': payment,
+        'page_title': 'Verify Payment',
+    }
+    
+    return render(request, 'payment/verification.html', context)
+
+@login_required
+def payment_success(request, payment_id):
+    """Payment success page"""
+    payment = get_object_or_404(
+        Payment.objects.select_related('enrollment__course', 'student'),
+        id=payment_id,
+        student=request.user.student_profile
+    )
+    
+    context = {
+        'payment': payment,
+        'page_title': 'Payment Successful',
+    }
+    
+    return render(request, 'payment/success.html', context)
+
+@login_required
+def check_payment_status(request, payment_id):
+    """Check payment status (AJAX endpoint)"""
+    if request.is_ajax() or request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        payment = get_object_or_404(
+            Payment,
+            id=payment_id,
+            student=request.user.student_profile
+        )
+        
+        return JsonResponse({
+            'status': payment.status,
+            'is_verified': payment.is_verified,
+            'enrollment_status': payment.enrollment.enrollment_status if payment.enrollment else 'pending'
+        })
+    
+    return JsonResponse({'error': 'Invalid request'}, status=400)
+
+# ==================== COURSE ENROLLMENT CHECK ====================
+
+@login_required
+def check_enrollment_status(request, slug):
+    """Check if user is enrolled in a course (for AJAX calls)"""
+    course = get_object_or_404(Course, slug=slug)
+    
+    if hasattr(request.user, 'student_profile'):
+        enrollment = Enrollment.objects.filter(
+            student=request.user.student_profile,
+            course=course
+        ).first()
+        
+        if enrollment:
+            return JsonResponse({
+                'enrolled': True,
+                'status': enrollment.enrollment_status,
+                'payment_status': enrollment.payment_status,
+                'progress': enrollment.progress_percentage
+            })
+    
+    return JsonResponse({'enrolled': False})
+    
+
+@login_required
+def profile(request):
+    """User profile page"""
+    try:
+        student_profile = request.user.student_profile
+    except Student.DoesNotExist:
+        # Create student profile if it doesn't exist
+        student_profile = Student.objects.create(
+            user=request.user,
+            full_name=f"{request.user.first_name} {request.user.last_name}".strip()
+            # Remove the email parameter as Student model doesn't have email field
+        )
+    
+    # Get user's enrollments
+    enrollments = Enrollment.objects.filter(
+        student=student_profile
+    ).select_related('course').order_by('-enrolled_at')
+    
+    # Get active courses (in progress)
+    active_courses = enrollments.filter(
+        enrollment_status='active'
+    )[:5]
+    
+    # Get completed courses
+    completed_courses = enrollments.filter(
+        enrollment_status='completed'
+    )[:5]
+    
+    # Get certificates
+    certificates = Certificate.objects.filter(
+        student=student_profile
+    ).select_related('course').order_by('-issued_date')
+    
+    # Get course progress
+    course_progress = StudentCourseProgress.objects.filter(
+        student=student_profile
+    ).select_related('course')
+    
+    # Calculate statistics
+    total_enrollments = enrollments.count()
+    completed_count = enrollments.filter(enrollment_status='completed').count()
+    certificates_count = certificates.count()
+    
+    # Calculate total learning hours (estimate)
+    total_learning_hours = 0
+    for progress in course_progress:
+        total_learning_hours += progress.total_time_spent // 60  # Convert minutes to hours
+    
+    context = {
+        'student': student_profile,
+        'user_form': UserUpdateForm(instance=request.user),
+        'profile_form': StudentUpdateForm(instance=student_profile),
+        'active_courses': active_courses,
+        'completed_courses': completed_courses,
+        'certificates': certificates[:3],
+        'total_enrollments': total_enrollments,
+        'completed_count': completed_count,
+        'certificates_count': certificates_count,
+        'total_learning_hours': total_learning_hours,
+        'page_title': 'My Profile',
+    }
+    
+    return render(request, 'profile/profile.html', context)
+
+
+
+@login_required
+def update_profile(request):
+    """Update user profile"""
+    student_profile = get_object_or_404(Student, user=request.user)
+    
+    if request.method == 'POST':
+        user_form = UserUpdateForm(request.POST, instance=request.user)
+        profile_form = StudentUpdateForm(
+            request.POST, 
+            request.FILES, 
+            instance=student_profile
+        )
+        
+        if user_form.is_valid() and profile_form.is_valid():
+            user_form.save()
+            profile_form.save()
+            
+            # Update student's full name if user names changed
+            if user_form.has_changed():
+                student_profile.full_name = f"{user_form.cleaned_data['first_name']} {user_form.cleaned_data['last_name']}"
+                student_profile.save()
+            
+            messages.success(request, 'Your profile has been updated successfully!')
+            return redirect('core:profile')
+        else:
+            messages.error(request, 'Please correct the errors below.')
+    else:
+        user_form = UserUpdateForm(instance=request.user)
+        profile_form = StudentUpdateForm(instance=student_profile)
+    
+    context = {
+        'user_form': user_form,
+        'profile_form': profile_form,
+        'student': student_profile,
+        'page_title': 'Update Profile',
+    }
+    
+    return render(request, 'profile/update_profile.html', context)
+
+
+@login_required
+def change_password(request):
+    """Change password view"""
+    if request.method == 'POST':
+        form = PasswordChangeForm(request.user, request.POST)
+        if form.is_valid():
+            user = form.save()
+            # Update the session to prevent logout
+            update_session_auth_hash(request, user)
+            messages.success(request, 'Your password has been changed successfully!')
+            return redirect('core:settings')
+        else:
+            messages.error(request, 'Please correct the errors below.')
+    else:
+        form = PasswordChangeForm(request.user)
+    
+    context = {
+        'form': form,
+        'page_title': 'Change Password',
+    }
+    
+    return render(request, 'profile/change_password.html', context)
+
+    
+# ==================== ADMIN DASHBOARD ====================
+
+@login_required
+@user_passes_test(lambda u: u.is_staff)
+def admin_dashboard(request):
+    """Admin dashboard with statistics"""
+    from django.db.models import Count, Sum
+    
+    # Get statistics
+    total_courses = Course.objects.count()
+    active_courses = Course.objects.filter(is_active=True).count()
+    total_students = Student.objects.count()
+    active_students = Student.objects.filter(is_active=True).count()
+    total_instructors = Instructor.objects.count()
+    active_instructors = Instructor.objects.filter(is_active=True).count()
+    
+    # Enrollment statistics
+    total_enrollments = Enrollment.objects.count()
+    active_enrollments = Enrollment.objects.filter(enrollment_status='active').count()
+    completed_enrollments = Enrollment.objects.filter(enrollment_status='completed').count()
+    
+    # Payment statistics
+    total_payments = Payment.objects.count()
+    total_revenue = Payment.objects.filter(status='completed').aggregate(
+        total=Sum('amount')
+    )['total'] or 0
+    
+    # Recent activities
+    recent_courses = Course.objects.order_by('-created_at')[:5]
+    recent_enrollments = Enrollment.objects.select_related('student', 'course').order_by('-enrolled_at')[:5]
+    recent_payments = Payment.objects.select_related('student', 'enrollment__course').order_by('-payment_date')[:5]
+    
+    context = {
+        'total_courses': total_courses,
+        'active_courses': active_courses,
+        'total_students': total_students,
+        'active_students': active_students,
+        'total_instructors': total_instructors,
+        'active_instructors': active_instructors,
+        'total_enrollments': total_enrollments,
+        'active_enrollments': active_enrollments,
+        'completed_enrollments': completed_enrollments,
+        'total_payments': total_payments,
+        'total_revenue': total_revenue,
+        'recent_courses': recent_courses,
+        'recent_enrollments': recent_enrollments,
+        'recent_payments': recent_payments,
+        'page_title': 'Admin Dashboard',
+    }
+    
+    return render(request, 'admin/dashboard.html', context)
+
+
+
+def gallery(request):
+    return HttpResponse("Gallery Page (Coming Soon)")
+
+def faq(request):
+    return HttpResponse("FAQ Page (Coming Soon)")
+
+def donate(request):
+    return HttpResponse("Donate Page (Coming Soon)")
+
+
 def about(request):
     """About page"""
     instructors_count = Instructor.objects.filter(is_active=True).count()
@@ -138,1471 +1266,29 @@ def contact(request):
     
     return render(request, 'core/contact.html', {'form': form, 'title': 'Contact Us'})
 
-def search(request):
-    """Search functionality"""
-    query = request.GET.get('q', '')
-    results = {}
-    
-    if query:
-        # Search courses
-        results['courses'] = Course.objects.filter(
-            Q(name__icontains=query) |
-            Q(description__icontains=query) |
-            Q(short_description__icontains=query),
-            is_active=True,
-            is_approved=True
-        )[:10]
-        
-        # Search instructors
-        results['instructors'] = Instructor.objects.filter(
-            Q(full_name__icontains=query) |
-            Q(bio__icontains=query) |
-            Q(specialization__icontains=query),
-            is_active=True
-        )[:10]
-        
-        # Search blog posts
-        results['blog_posts'] = BlogPost.objects.filter(
-            Q(title__icontains=query) |
-            Q(content__icontains=query),
-            is_published=True
-        )[:10]
-    
-    context = {
-        'results': results,
-        'query': query,
-        'title': f'Search Results: {query}'
-    }
-    return render(request, 'core/search.html', context)
-
-# ==================== COURSE VIEWS ====================
-def courses(request):
-    """Browse all courses"""
-    category_slug = request.GET.get('category', '')
-    level = request.GET.get('level', '')
-    price = request.GET.get('price', '')
-    rating = request.GET.get('rating', '')
-    sort = request.GET.get('sort', 'newest')
-    
-    courses_qs = Course.objects.filter(is_active=True, is_approved=True)
-    
-    # Filters
-    if category_slug:
-        category = get_object_or_404(Category, slug=category_slug, is_active=True)
-        courses_qs = courses_qs.filter(category=category)
-    
-    if level and level != 'all':
-        courses_qs = courses_qs.filter(level=level)
-    
-    if price == 'free':
-        courses_qs = courses_qs.filter(price_type='free')
-    elif price == 'paid':
-        courses_qs = courses_qs.filter(price_type='paid')
-    
-    if rating:
-        courses_qs = courses_qs.filter(average_rating__gte=float(rating))
-    
-    # Sorting
-    if sort == 'popular':
-        courses_qs = courses_qs.order_by('-enrollment_count')
-    elif sort == 'highest_rated':
-        courses_qs = courses_qs.order_by('-average_rating')
-    elif sort == 'price_low':
-        courses_qs = courses_qs.order_by('base_price')
-    elif sort == 'price_high':
-        courses_qs = courses_qs.order_by('-base_price')
-    else:  # newest
-        courses_qs = courses_qs.order_by('-created_at')
-    
-    # Pagination
-    paginator = Paginator(courses_qs, 12)
-    page = request.GET.get('page', 1)
-    try:
-        courses_page = paginator.page(page)
-    except:
-        courses_page = paginator.page(1)
-    
-    categories = Category.objects.filter(is_active=True).annotate(
-        course_count=Count('courses', filter=Q(courses__is_active=True))
-    )
-    
-    context = {
-        'courses': courses_page,
-        'categories': categories,
-        'selected_category': category_slug,
-        'selected_level': level,
-        'selected_price': price,
-        'selected_rating': rating,
-        'selected_sort': sort,
-        'title': 'Browse All Courses'
-    }
-    return render(request, 'courses/browse.html', context)
 
 
+   
+    
+    
+    
 
-def course_detail(request, course_slug):
-    """Course detail page"""
-    course = get_object_or_404(
-        Course.objects.select_related('category').prefetch_related(
-            'modules',
-            'modules__lessons',
-            'course_instructors',
-            'course_instructors__instructor',
-            'reviews',
-            'reviews__student'
-        ),
-        slug=course_slug,
-        is_active=True,
-        is_approved=True
-    )
-    
-    # Check if user is enrolled
-    enrollment = None
-    if request.user.is_authenticated and hasattr(request.user, 'student_profile'):
-        enrollment = Enrollment.objects.filter(
-            student=request.user.student_profile,
-            course=course,
-            enrollment_status__in=['active', 'completed']
-        ).first()
-    
-    # Check if user has reviewed this course
-    user_review = None
-    if request.user.is_authenticated and hasattr(request.user, 'student_profile'):
-        user_review = CourseReview.objects.filter(
-            student=request.user.student_profile,
-            course=course
-        ).first()
-    
-    # Get related courses (same category)
-    related_courses = Course.objects.filter(
-        category=course.category,
-        is_active=True,
-        is_approved=True
-    ).exclude(id=course.id).order_by('-created_at')[:4]
-    
-    context = {
-        'course': course,
-        'enrollment': enrollment,
-        'user_review': user_review,
-        'related_courses': related_courses,
-        'title': f'{course.name} - Taw Haa Zin Nurain'
-    }
-    
-    return render(request, 'courses/detail.html', context)
-
-
-@login_required
-def enroll_course(request, course_slug):
-    """Enroll in a course"""
-    course = get_object_or_404(Course, slug=course_slug, is_active=True, is_approved=True)
-    student = get_object_or_404(Student, user=request.user)
-    
-    # Check if already enrolled
-    existing_enrollment = Enrollment.objects.filter(
-        student=student,
-        course=course,
-        enrollment_status__in=['active', 'pending', 'completed']
-    ).first()
-    
-    if existing_enrollment:
-        messages.info(request, 'You are already enrolled in this course.')
-        return redirect('core:course_detail', course_slug=course.slug)
-    
-    # Handle free courses
-    if course.price_type == 'free' or course.get_current_price() == 0:
-        # Create enrollment for free course
-        enrollment = Enrollment.objects.create(
-            student=student,
-            course=course,
-            enrollment_status='active',
-            payment_status='paid',
-            start_date=timezone.now().date(),
-            amount_paid=0
-        )
-        
-        # Send enrollment notification
-        Notification.objects.create(
-            recipient=request.user,
-            notification_type='enrollment',
-            title=f'Enrolled in {course.name}',
-            message=f'You have successfully enrolled in {course.name}. Start learning now!',
-            enrollment=enrollment,
-            course=course
-        )
-        
-        messages.success(request, f'Successfully enrolled in {course.name}!')
-        return redirect('core:learning_dashboard', enrollment_id=enrollment.id)
-    
-    # For paid courses, show checkout page
-    if request.method == 'POST':
-        # Process coupon if provided
-        coupon_code = request.POST.get('coupon_code', '').strip()
-        coupon = None
-        discount_amount = Decimal('0.00')
-        
-        if coupon_code:
-            try:
-                coupon = Coupon.objects.get(code=coupon_code, is_active=True)
-                is_valid, message = coupon.is_valid(request.user, course)
-                if is_valid:
-                    discount_amount = coupon.calculate_discount(course.get_current_price())
-                else:
-                    messages.error(request, message)
-                    return redirect('core:enroll_course', course_slug=course.slug)
-            except Coupon.DoesNotExist:
-                messages.error(request, 'Invalid coupon code')
-                return redirect('core:enroll_course', course_slug=course.slug)
-        
-        # Calculate final amount
-        final_amount = course.get_current_price() - discount_amount
-        
-        # Create enrollment with pending status
-        enrollment = Enrollment.objects.create(
-            student=student,
-            course=course,
-            enrollment_status='pending',
-            payment_status='pending'
-        )
-        
-        # Store in session for checkout
-        request.session['enrollment_id'] = str(enrollment.id)
-        request.session['course_id'] = str(course.id)
-        request.session['final_amount'] = str(final_amount)
-        request.session['coupon_code'] = coupon_code if coupon else ''
-        
-        return redirect('core:checkout')
-    
-    # GET request - show enrollment form
-    context = {
-        'course': course,
-        'student': student,
-        'title': f'Enroll in {course.name}'
-    }
-    return render(request, 'courses/enroll.html', context)
-
-# ==================== PAYMENT & CHECKOUT ====================
-@login_required
-def checkout(request):
-    """Checkout and payment page"""
-    enrollment_id = request.session.get('enrollment_id')
-    course_id = request.session.get('course_id')
-    final_amount = request.session.get('final_amount', '0')
-    coupon_code = request.session.get('coupon_code', '')
-    
-    if not enrollment_id or not course_id:
-        messages.error(request, 'Invalid checkout session')
-        return redirect('core:courses')
-    
-    try:
-        enrollment = Enrollment.objects.get(id=enrollment_id, student__user=request.user)
-        course = Course.objects.get(id=course_id)
-    except (Enrollment.DoesNotExist, Course.DoesNotExist):
-        messages.error(request, 'Invalid enrollment')
-        return redirect('core:courses')
-    
-    # Calculate amounts
-    base_price = course.get_current_price()
-    discount_amount = Decimal(base_price) - Decimal(final_amount)
-    
-    if request.method == 'POST':
-        payment_method = request.POST.get('payment_method')
-        transaction_id = request.POST.get('transaction_id', '').strip()
-        
-        if not transaction_id:
-            messages.error(request, 'Please provide a transaction ID')
-            return redirect('core:checkout')
-        
-        # Generate a unique transaction ID if needed
-        if transaction_id == 'auto':
-            transaction_id = f"TXN{str(uuid.uuid4())[:8].upper()}"
-        
-        # Create payment record
-        payment = Payment.objects.create(
-            enrollment=enrollment,
-            student=enrollment.student,
-            amount=final_amount,
-            payment_method=payment_method,
-            transaction_id=transaction_id,
-            status='completed',  # Auto-verify for demo
-            is_verified=True,
-            verified_at=timezone.now(),
-            verified_by=request.user
-        )
-        
-        # Update enrollment
-        enrollment.payment_status = 'paid'
-        enrollment.enrollment_status = 'active'
-        enrollment.start_date = timezone.now().date()
-        enrollment.amount_paid = final_amount
-        enrollment.save()
-        
-        # Update coupon usage
-        if coupon_code:
-            try:
-                coupon = Coupon.objects.get(code=coupon_code)
-                coupon.used_count += 1
-                coupon.save()
-            except Coupon.DoesNotExist:
-                pass
-        
-        # Clear session
-        request.session.pop('enrollment_id', None)
-        request.session.pop('course_id', None)
-        request.session.pop('final_amount', None)
-        request.session.pop('coupon_code', None)
-        
-        # Send notification
-        Notification.objects.create(
-            recipient=request.user,
-            notification_type='payment',
-            title='Payment Successful',
-            message=f'Your payment of ৳{final_amount} for {course.name} has been processed successfully.',
-            enrollment=enrollment,
-            course=course
-        )
-        
-        messages.success(request, f'Payment successful! You are now enrolled in {course.name}.')
-        return redirect('core:learning_dashboard', enrollment_id=enrollment.id)
-    
-    context = {
-        'enrollment': enrollment,
-        'course': course,
-        'base_price': base_price,
-        'discount_amount': discount_amount,
-        'final_amount': final_amount,
-        'coupon_code': coupon_code,
-        'title': 'Checkout'
-    }
-    return render(request, 'payment/checkout.html', context)
-
-@login_required
-def payment_success(request, transaction_id):
-    """Payment success page"""
-    payment = get_object_or_404(Payment, transaction_id=transaction_id, student__user=request.user)
-    
-    context = {
-        'payment': payment,
-        'title': 'Payment Successful'
-    }
-    return render(request, 'payment/success.html', context)
-
-# ==================== LEARNING DASHBOARD ====================
-@login_required
-def learning_dashboard(request, enrollment_id):
-    """Main learning dashboard"""
-    enrollment = get_object_or_404(
-        Enrollment, 
-        id=enrollment_id, 
-        student__user=request.user,
-        enrollment_status__in=['active', 'completed']
-    )
-    
-    course = enrollment.course
-    student = enrollment.student
-    
-    # Get or create course progress
-    course_progress, created = StudentCourseProgress.objects.get_or_create(
-        student=student,
-        course=course
-    )
-    
-    # Get modules and lessons with progress
-    modules = course.modules.filter(is_published=True).order_by('order')
-    
-    # Calculate overall progress
-    total_required_lessons = Lesson.objects.filter(
-        module__course=course,
-        is_published=True,
-        require_completion=True
-    ).count()
-    
-    completed_lessons = StudentLessonProgress.objects.filter(
-        student=student,
-        lesson__module__course=course,
-        status='completed',
-        enrollment=enrollment
-    ).count()
-    
-    progress_percentage = 0
-    if total_required_lessons > 0:
-        progress_percentage = (completed_lessons / total_required_lessons) * 100
-    
-    # Update enrollment progress
-    enrollment.progress_percentage = progress_percentage
-    enrollment.last_accessed = timezone.now()
-    enrollment.save()
-    
-    # Update course progress
-    course_progress.overall_progress = progress_percentage
-    course_progress.completed_lessons = completed_lessons
-    course_progress.last_accessed = timezone.now()
-    course_progress.save()
-    
-    # Get recent activity
-    recent_progress = StudentLessonProgress.objects.filter(
-        student=student,
-        enrollment=enrollment
-    ).order_by('-last_accessed')[:5]
-    
-    # Get next lesson to continue
-    next_lesson = None
-    if progress_percentage < 100:
-        # Find first incomplete lesson
-        for module in modules:
-            for lesson in module.lessons.filter(is_published=True, require_completion=True):
-                progress, created = StudentLessonProgress.objects.get_or_create(
-                    student=student,
-                    lesson=lesson,
-                    enrollment=enrollment,
-                    defaults={'status': 'not_started'}
-                )
-                if progress.status != 'completed':
-                    next_lesson = lesson
-                    break
-            if next_lesson:
-                break
-    
-    context = {
-        'enrollment': enrollment,
-        'course': course,
-        'modules': modules,
-        'student': student,
-        'course_progress': course_progress,
-        'progress_percentage': progress_percentage,
-        'completed_lessons': completed_lessons,
-        'total_lessons': total_required_lessons,
-        'recent_progress': recent_progress,
-        'next_lesson': next_lesson,
-        'title': f'Learning - {course.name}'
-    }
-    return render(request, 'learning/dashboard.html', context)
-
-@login_required
-def lesson_view(request, enrollment_id, lesson_id):
-    """View a lesson"""
-    enrollment = get_object_or_404(
-        Enrollment,
-        id=enrollment_id,
-        student__user=request.user,
-        enrollment_status__in=['active', 'completed']
-    )
-    
-    lesson = get_object_or_404(
-        Lesson,
-        id=lesson_id,
-        module__course=enrollment.course,
-        is_published=True
-    )
-    
-    # Get or create lesson progress
-    lesson_progress, created = StudentLessonProgress.objects.get_or_create(
-        student=enrollment.student,
-        lesson=lesson,
-        enrollment=enrollment,
-        defaults={'status': 'in_progress', 'started_at': timezone.now()}
-    )
-    
-    # Update progress status
-    if lesson_progress.status == 'not_started':
-        lesson_progress.status = 'in_progress'
-        lesson_progress.started_at = timezone.now()
-    
-    # Update last accessed
-    lesson_progress.last_accessed = timezone.now()
-    lesson_progress.save()
-    
-    # Get module info
-    module = lesson.module
-    course = enrollment.course
-    
-    # Get all lessons in module for navigation
-    module_lessons = list(module.lessons.filter(is_published=True).order_by('order'))
-    
-    # Find current position
-    current_index = None
-    for i, l in enumerate(module_lessons):
-        if l.id == lesson.id:
-            current_index = i
-            break
-    
-    # Navigation
-    prev_lesson = None
-    next_lesson = None
-    
-    if current_index is not None:
-        if current_index > 0:
-            prev_lesson = module_lessons[current_index - 1]
-        if current_index < len(module_lessons) - 1:
-            next_lesson = module_lessons[current_index + 1]
-    
-    # Get interactive MCQs for this lesson
-    interactive_mcqs = InteractiveMCQ.objects.filter(
-        lesson=lesson,
-        is_active=True
-    ).order_by('appear_at_second')
-    
-    # Get quiz if exists
-    quiz = None
-    if hasattr(lesson, 'quiz'):
-        quiz = lesson.quiz
-    
-    # Get resources for this lesson
-    resources = CourseResource.objects.filter(
-        Q(course=course) | Q(lesson=lesson),
-        is_active=True
-    ).order_by('order')
-    
-    # Convert interactive MCQs to JSON for JavaScript
-    mcqs_data = []
-    for mcq in interactive_mcqs:
-        mcqs_data.append({
-            'id': str(mcq.id),
-            'question': mcq.question,
-            'type': mcq.question_type,
-            'appear_at': mcq.appear_at_second,
-            'time_limit': mcq.time_limit_seconds,
-            'allow_skip': mcq.allow_skip,
-            'max_attempts': mcq.max_attempts,
-            'points': mcq.points_value,
-            'options': [
-                {
-                    'id': str(option.id),
-                    'text': option.text,
-                    'is_correct': option.is_correct
-                }
-                for option in mcq.get_options()
-            ]
-        })
-    
-    context = {
-        'enrollment': enrollment,
-        'lesson': lesson,
-        'lesson_progress': lesson_progress,
-        'module': module,
-        'course': course,
-        'prev_lesson': prev_lesson,
-        'next_lesson': next_lesson,
-        'interactive_mcqs': interactive_mcqs,
-        'mcqs_json': json.dumps(mcqs_data),
-        'quiz': quiz,
-        'resources': resources,
-        'youtube_id': lesson.get_youtube_id(),
-        'title': f'{lesson.title} - {course.name}'
-    }
-    return render(request, 'learning/lesson.html', context)
-
-# ==================== API VIEWS ====================
-@login_required
-@require_POST
-@csrf_exempt
-def submit_mcq_response(request):
-    """Submit response for interactive MCQ"""
-    try:
-        data = json.loads(request.body)
-        mcq_id = data.get('mcq_id')
-        selected_option_ids = data.get('selected_options', [])
-        enrollment_id = data.get('enrollment_id')
-        
-        mcq = InteractiveMCQ.objects.get(id=mcq_id)
-        enrollment = Enrollment.objects.get(id=enrollment_id, student__user=request.user)
-        student = enrollment.student
-        
-        # Get selected options
-        selected_options = MCQOption.objects.filter(id__in=selected_option_ids)
-        
-        # Check if answer is correct
-        is_correct = True
-        correct_options = mcq.get_options().filter(is_correct=True)
-        
-        if mcq.question_type == 'single':
-            is_correct = (selected_options.count() == 1 and 
-                         selected_options.first().is_correct)
-        else:  # multiple
-            selected_correct = selected_options.filter(is_correct=True).count()
-            is_correct = (selected_correct == correct_options.count() and 
-                         selected_options.count() == correct_options.count())
-        
-        # Calculate points
-        points_earned = mcq.points_value if is_correct else 0
-        
-        # Save response
-        response = StudentMCQResponse.objects.create(
-            student=student,
-            mcq=mcq,
-            is_correct=is_correct,
-            points_earned=points_earned,
-            response_time_seconds=data.get('response_time', 0)
-        )
-        response.selected_options.set(selected_options)
-        
-        # Update lesson progress
-        lesson_progress, created = StudentLessonProgress.objects.get_or_create(
-            student=student,
-            lesson=mcq.lesson,
-            enrollment=enrollment
-        )
-        lesson_progress.points_earned += points_earned
-        lesson_progress.save()
-        
-        return JsonResponse({
-            'success': True,
-            'is_correct': is_correct,
-            'points_earned': points_earned,
-            'total_points': lesson_progress.points_earned,
-            'explanations': [
-                {
-                    'option_id': str(opt.id),
-                    'explanation': opt.explanation,
-                    'is_correct': opt.is_correct
-                }
-                for opt in mcq.get_options() if opt.explanation
-            ]
-        })
-        
-    except Exception as e:
-        return JsonResponse({'error': str(e)}, status=400)
-
-@login_required
-@require_POST
-@csrf_exempt
-def complete_lesson(request, lesson_id):
-    """Mark lesson as completed"""
-    try:
-        lesson = Lesson.objects.get(id=lesson_id)
-        student = request.user.student_profile
-        
-        # Find enrollment for this course
-        enrollment = Enrollment.objects.get(
-            student=student,
-            course=lesson.module.course,
-            enrollment_status__in=['active', 'completed']
-        )
-        
-        # Get or create lesson progress
-        progress, created = StudentLessonProgress.objects.get_or_create(
-            student=student,
-            lesson=lesson,
-            enrollment=enrollment
-        )
-        
-        # Mark as completed
-        progress.status = 'completed'
-        progress.completed_at = timezone.now()
-        progress.points_earned += lesson.points_value
-        progress.save()
-        
-        # Update course progress
-        course_progress, created = StudentCourseProgress.objects.get_or_create(
-            student=student,
-            course=lesson.module.course
-        )
-        course_progress.update_progress()
-        
-        # Update enrollment progress
-        enrollment.update_progress()
-        
-        # Check if course is completed
-        if enrollment.progress_percentage >= 100 and enrollment.enrollment_status == 'active':
-            enrollment.enrollment_status = 'completed'
-            enrollment.completed_at = timezone.now()
-            enrollment.save()
-            
-            # Generate certificate if available
-            if enrollment.course.certificate_available:
-                certificate, created = Certificate.objects.get_or_create(
-                    enrollment=enrollment,
-                    defaults={
-                        'student': student,
-                        'course': enrollment.course,
-                        'student_name': student.full_name,
-                        'course_name': enrollment.course.name,
-                        'completion_date': timezone.now().date(),
-                        'final_score': enrollment.progress_percentage,
-                    }
-                )
-                
-                # Send notification
-                Notification.objects.create(
-                    recipient=request.user,
-                    notification_type='certificate',
-                    title='Course Completed!',
-                    message=f'Congratulations! You have completed {enrollment.course.name}. Your certificate is ready.',
-                    enrollment=enrollment,
-                    course=enrollment.course
-                )
-        
-        return JsonResponse({
-            'success': True,
-            'progress': enrollment.progress_percentage,
-            'next_lesson_url': None  # You can implement next lesson logic here
-        })
-        
-    except Exception as e:
-        return JsonResponse({'error': str(e)}, status=400)
-
-@login_required
-@require_POST
-@csrf_exempt
-def save_video_progress(request):
-    """Save video watch progress"""
-    try:
-        data = json.loads(request.body)
-        lesson_id = data.get('lesson_id')
-        enrollment_id = data.get('enrollment_id')
-        current_time = data.get('current_time')
-        duration = data.get('duration')
-        
-        lesson = Lesson.objects.get(id=lesson_id)
-        enrollment = Enrollment.objects.get(id=enrollment_id, student__user=request.user)
-        
-        # Get or create lesson progress
-        progress, created = StudentLessonProgress.objects.get_or_create(
-            student=enrollment.student,
-            lesson=lesson,
-            enrollment=enrollment
-        )
-        
-        # Update video progress
-        if current_time > progress.video_progress_seconds:
-            progress.video_progress_seconds = current_time
-        
-        if duration:
-            progress.video_total_watched = min(duration, progress.video_total_watched + 1)
-        
-        progress.save()
-        
-        return JsonResponse({'success': True})
-        
-    except Exception as e:
-        return JsonResponse({'error': str(e)}, status=400)
-
-# ==================== QUIZ VIEWS ====================
-@login_required
-def start_quiz(request, enrollment_id, quiz_id):
-    """Start a quiz"""
-    enrollment = get_object_or_404(
-        Enrollment,
-        id=enrollment_id,
-        student__user=request.user,
-        enrollment_status='active'
-    )
-    
-    quiz = get_object_or_404(
-        Quiz,
-        id=quiz_id,
-        is_active=True,
-        is_published=True
-    )
-    
-    # Check if quiz belongs to enrolled course
-    if quiz.lesson and quiz.lesson.module.course != enrollment.course:
-        if quiz.module and quiz.module.course != enrollment.course:
-            if quiz.course and quiz.course != enrollment.course:
-                messages.error(request, 'You do not have access to this quiz')
-                return redirect('core:learning_dashboard', enrollment_id=enrollment.id)
-    
-    # Check attempt limits
-    previous_attempts = StudentQuizAttempt.objects.filter(
-        student=enrollment.student,
-        quiz=quiz,
-        enrollment=enrollment
-    ).count()
-    
-    if previous_attempts >= quiz.max_attempts:
-        messages.error(request, f'You have reached the maximum attempts ({quiz.max_attempts}) for this quiz')
-        return redirect('core:learning_dashboard', enrollment_id=enrollment.id)
-    
-    # Check availability dates
-    now = timezone.now()
-    if quiz.available_from and now < quiz.available_from:
-        messages.error(request, 'This quiz is not yet available')
-        return redirect('core:learning_dashboard', enrollment_id=enrollment.id)
-    
-    if quiz.available_until and now > quiz.available_until:
-        messages.error(request, 'This quiz is no longer available')
-        return redirect('core:learning_dashboard', enrollment_id=enrollment.id)
-    
-    # Create quiz attempt
-    attempt = StudentQuizAttempt.objects.create(
-        student=enrollment.student,
-        quiz=quiz,
-        enrollment=enrollment,
-        attempt_number=previous_attempts + 1,
-        total_questions=quiz.questions.count()
-    )
-    
-    # Get questions
-    questions = quiz.questions.filter(is_active=True)
-    if quiz.randomize_questions:
-        questions = questions.order_by('?')
-    
-    context = {
-        'enrollment': enrollment,
-        'quiz': quiz,
-        'attempt': attempt,
-        'questions': questions,
-        'title': f'Quiz: {quiz.title}'
-    }
-    return render(request, 'learning/quiz_start.html', context)
-
-@login_required
-@require_POST
-def submit_quiz(request, attempt_id):
-    """Submit quiz answers"""
-    attempt = get_object_or_404(
-        StudentQuizAttempt,
-        id=attempt_id,
-        student__user=request.user,
-        is_completed=False
-    )
-    
-    quiz = attempt.quiz
-    data = request.POST
-    
-    # Process each question
-    for key, value in data.items():
-        if key.startswith('question_'):
-            question_id = key.split('_')[1]
-            try:
-                question = QuizQuestion.objects.get(id=question_id, quiz=quiz)
-                
-                # Create response
-                response = QuizResponse.objects.create(
-                    attempt=attempt,
-                    question=question
-                )
-                
-                # Handle different question types
-                if question.question_type in ['mcq_single', 'true_false']:
-                    try:
-                        option = QuestionOption.objects.get(id=value, question=question)
-                        response.selected_options.add(option)
-                        response.is_correct = option.is_correct
-                        response.points_earned = question.points if option.is_correct else 0
-                    except (ValueError, QuestionOption.DoesNotExist):
-                        pass
-                
-                elif question.question_type == 'mcq_multiple':
-                    option_ids = data.getlist(key)
-                    selected_options = QuestionOption.objects.filter(
-                        id__in=option_ids,
-                        question=question
-                    )
-                    response.selected_options.set(selected_options)
-                    
-                    # Check if all correct options selected and no incorrect ones
-                    correct_options = question.options.filter(is_correct=True)
-                    selected_correct = selected_options.filter(is_correct=True).count()
-                    
-                    if (selected_correct == correct_options.count() and 
-                        selected_options.count() == correct_options.count()):
-                        response.is_correct = True
-                        response.points_earned = question.points
-                
-                elif question.question_type in ['short_answer', 'essay']:
-                    response.text_response = value
-                    # Auto-grading not implemented for text responses
-                    response.points_earned = 0
-                
-                response.save()
-                
-            except QuizQuestion.DoesNotExist:
-                continue
-    
-    # Calculate final score
-    attempt.calculate_score()
-    attempt.is_completed = True
-    attempt.submitted_at = timezone.now()
-    attempt.save()
-    
-    # Update lesson progress if this is a lesson quiz
-    if quiz.lesson:
-        lesson_progress, created = StudentLessonProgress.objects.get_or_create(
-            student=attempt.student,
-            lesson=quiz.lesson,
-            enrollment=attempt.enrollment
-        )
-        lesson_progress.quiz_score = attempt.score
-        lesson_progress.attempts_count += 1
-        if attempt.is_passed:
-            lesson_progress.points_earned = quiz.lesson.points_value
-        lesson_progress.save()
-    
-    return JsonResponse({
-        'success': True,
-        'score': attempt.score,
-        'is_passed': attempt.is_passed,
-        'correct': attempt.correct_answers,
-        'total': attempt.total_questions
-    })
-
-# ==================== DASHBOARD VIEWS ====================
-@login_required
+# User Dashboard
+# -------------------
 def dashboard(request):
-    """Student dashboard"""
-    if not hasattr(request.user, 'student_profile'):
-        messages.error(request, 'Please complete your student profile first.')
-        return redirect('core:profile_settings')
-    
-    student = request.user.student_profile
-    
-    # Get enrollments
-    enrollments = student.enrollments.select_related('course').filter(
-        enrollment_status__in=['active', 'completed']
-    )
-    
-    # Calculate statistics
-    total_courses = enrollments.count()
-    active_courses = enrollments.filter(enrollment_status='active').count()
-    completed_courses = enrollments.filter(enrollment_status='completed').count()
-    
-    # Calculate progress
-    overall_progress = 0
-    if enrollments.exists():
-        overall_progress = enrollments.aggregate(Avg('progress_percentage'))['progress_percentage__avg'] or 0
-    
-    # Get certificates
-    certificates = Certificate.objects.filter(student=student)
-    
-    # Get recent activity
-    recent_activity = StudentLessonProgress.objects.filter(
-        student=student
-    ).select_related('lesson', 'lesson__module__course').order_by('-last_accessed')[:10]
-    
-    # Get upcoming quizzes
-    upcoming_quizzes = Quiz.objects.filter(
-        course__enrollments__student=student,
-        course__enrollments__enrollment_status='active',
-        is_active=True,
-        is_published=True,
-        available_from__gte=timezone.now()
-    )[:5]
-    
-    context = {
-        'student': student,
-        'enrollments': enrollments,
-        'total_courses': total_courses,
-        'active_courses': active_courses,
-        'completed_courses': completed_courses,
-        'overall_progress': overall_progress,
-        'certificates': certificates,
-        'recent_activity': recent_activity,
-        'upcoming_quizzes': upcoming_quizzes,
-        'title': 'Dashboard'
-    }
-    return render(request, 'dashboard/overview.html', context)
+    return HttpResponse("User Dashboard (Coming Soon)")
 
-@login_required
 def my_courses(request):
-    """Display user's enrolled courses"""
-    if not hasattr(request.user, 'student_profile'):
-        messages.error(request, 'Please complete your student profile first.')
-        return redirect('core:profile_settings')
-    
-    student = request.user.student_profile
-    enrollments = student.enrollments.select_related('course').order_by('-enrolled_at')
-    
-    context = {
-        'enrollments': enrollments,
-        'title': 'My Courses'
-    }
-    return render(request, 'dashboard/my_courses.html', context)
+    return HttpResponse("My Courses Page (Coming Soon)")
 
-@login_required
 def my_progress(request):
-    """Display user's progress"""
-    if not hasattr(request.user, 'student_profile'):
-        messages.error(request, 'Please complete your student profile first.')
-        return redirect('core:profile_settings')
-    
-    student = request.user.student_profile
-    enrollments = student.enrollments.select_related('course').filter(
-        enrollment_status__in=['active', 'completed']
-    )
-    
-    # Prepare progress data for charts
-    progress_data = []
-    for enrollment in enrollments:
-        course_progress, created = StudentCourseProgress.objects.get_or_create(
-            student=student,
-            course=enrollment.course
-        )
-        
-        progress_data.append({
-            'course': enrollment.course.name,
-            'progress': enrollment.progress_percentage,
-            'completed_lessons': course_progress.completed_lessons or 0,
-            'total_lessons': Lesson.objects.filter(
-                module__course=enrollment.course,
-                is_published=True,
-                require_completion=True
-            ).count()
-        })
-    
-    context = {
-        'enrollments': enrollments,
-        'progress_data': progress_data,
-        'overall_progress': enrollments.aggregate(Avg('progress_percentage'))['progress_percentage__avg'] or 0,
-        'title': 'My Progress'
-    }
-    return render(request, 'dashboard/my_progress.html', context)
+    return HttpResponse("My Progress Page (Coming Soon)")
 
-@login_required
-def payment_history(request):
-    """Display user's payment history"""
-    if not hasattr(request.user, 'student_profile'):
-        messages.error(request, 'Please complete your student profile first.')
-        return redirect('core:profile_settings')
-    
-    student = request.user.student_profile
-    payments = Payment.objects.filter(student=student).order_by('-payment_date')
-    
-    context = {
-        'payments': payments,
-        'total_paid': payments.filter(status='completed').aggregate(Sum('amount'))['amount__sum'] or 0,
-        'title': 'Payment History'
-    }
-    return render(request, 'dashboard/payment_history.html', context)
-
-@login_required
 def certificates(request):
-    """Display user's certificates"""
-    if not hasattr(request.user, 'student_profile'):
-        messages.error(request, 'Please complete your student profile first.')
-        return redirect('core:profile_settings')
-    
-    student = request.user.student_profile
-    certificates = Certificate.objects.filter(student=student).select_related('course')
-    
-    context = {
-        'certificates': certificates,
-        'title': 'My Certificates'
-    }
-    return render(request, 'dashboard/certificates.html', context)
+    return HttpResponse("Certificates Page (Coming Soon)")
 
-
-@login_required
-def profile_settings(request):
-    """User profile settings"""
-    student = getattr(request.user, 'student_profile', None)
-    
-    if request.method == 'POST':
-        print("POST data:", request.POST)  # Debug
-        print("FILES:", request.FILES)  # Debug
-        
-        # Determine which form was submitted
-        if 'update_profile' in request.POST:
-            user_form = UserUpdateForm(request.POST, instance=request.user)
-            
-            if student:
-                student_form = StudentUpdateForm(request.POST, request.FILES, instance=student)
-                print("Using existing student form")  # Debug
-            else:
-                student_form = None
-                print("No student form (student doesn't exist)")  # Debug
-            
-            print("User form valid:", user_form.is_valid())  # Debug
-            if student_form:
-                print("Student form valid:", student_form.is_valid())  # Debug
-                if student_form.errors:
-                    print("Student form errors:", student_form.errors)  # Debug
-            
-            if user_form.is_valid() and (student_form is None or student_form.is_valid()):
-                user_form.save()
-                print("User form saved")  # Debug
-                
-                if student_form:
-                    student_instance = student_form.save(commit=False)
-                    student_instance.user = request.user
-                    student_instance.save()
-                    print("Student form saved")  # Debug
-                elif not student:
-                    # Create student profile if doesn't exist
-                    Student.objects.create(
-                        user=request.user,
-                        full_name=f"{request.user.first_name} {request.user.last_name}",
-                        phone=request.POST.get('phone', ''),  # Phone might be empty
-                        country='Bangladesh',
-                        preferred_language='en',
-                        timezone='Asia/Dhaka'
-                    )
-                    print("Created new student profile")  # Debug
-                
-                messages.success(request, 'Profile updated successfully!')
-                return redirect('core:profile_settings')
-            
-            else:
-                # Show form errors
-                if user_form.errors:
-                    for field, errors in user_form.errors.items():
-                        for error in errors:
-                            messages.error(request, f"{field}: {error}")
-                if student_form and student_form.errors:
-                    for field, errors in student_form.errors.items():
-                        for error in errors:
-                            messages.error(request, f"{field}: {error}")
-        
-        elif 'change_password' in request.POST:
-            # Handle password change
-            old_password = request.POST.get('old_password')
-            new_password1 = request.POST.get('new_password1')
-            new_password2 = request.POST.get('new_password2')
-            
-            if not request.user.check_password(old_password):
-                messages.error(request, 'Current password is incorrect.')
-            elif new_password1 != new_password2:
-                messages.error(request, 'New passwords do not match.')
-            elif len(new_password1) < 8:
-                messages.error(request, 'Password must be at least 8 characters.')
-            else:
-                request.user.set_password(new_password1)
-                request.user.save()
-                update_session_auth_hash(request, request.user)
-                messages.success(request, 'Password changed successfully!')
-                return redirect('core:profile_settings')
-    
-    else:
-        user_form = UserUpdateForm(instance=request.user)
-        student_form = StudentUpdateForm(instance=student) if student else None
-    
-    context = {
-        'user_form': user_form,
-        'student_form': student_form,
-        'student': student,
-        'title': 'Profile Settings'
-    }
-    return render(request, 'dashboard/profile_settings.html', context)
-
-
-# ==================== TEAM VIEWS ====================
-def team(request):
-    """Display team members"""
-    instructors = Instructor.objects.filter(is_active=True).order_by('display_order')
-    
-    context = {
-        'instructors': instructors,
-        'title': 'Our Team'
-    }
-    return render(request, 'team/team.html', context)
-
-def instructor_detail(request, instructor_id):
-    """Display instructor details"""
-    instructor = get_object_or_404(Instructor, id=instructor_id, is_active=True)
-    
-    # Get courses taught by this instructor
-    courses_taught = Course.objects.filter(
-        course_instructors__instructor=instructor,
-        is_active=True,
-        is_approved=True
-    )
-    
-    context = {
-        'instructor': instructor,
-        'courses_taught': courses_taught,
-        'title': f'{instructor.full_name} - Instructor Profile'
-    }
-    return render(request, 'team/instructor_detail.html', context)
-
-# ==================== BLOG VIEWS ====================
-def blog(request):
-    """Display blog posts"""
-    posts = BlogPost.objects.filter(is_published=True).order_by('-published_at')
-    
-    # Pagination
-    paginator = Paginator(posts, 10)
-    page = request.GET.get('page', 1)
-    try:
-        posts_page = paginator.page(page)
-    except:
-        posts_page = paginator.page(1)
-    
-    # Recent posts
-    recent_posts = BlogPost.objects.filter(is_published=True).order_by('-published_at')[:5]
-    
-    # Categories
-    categories = BlogPost.objects.values('category').annotate(count=Count('category'))
-    
-    context = {
-        'posts': posts_page,
-        'recent_posts': recent_posts,
-        'categories': categories,
-        'title': 'Blog'
-    }
-    return render(request, 'blog/blog.html', context)
-
-def blog_detail(request, slug):
-    """Display single blog post"""
-    post = get_object_or_404(BlogPost, slug=slug, is_published=True)
-    
-    # Increment views
-    post.views += 1
-    post.save()
-    
-    # Related posts
-    related_posts = BlogPost.objects.filter(
-        category=post.category,
-        is_published=True
-    ).exclude(id=post.id)[:3]
-    
-    context = {
-        'post': post,
-        'related_posts': related_posts,
-        'title': post.title
-    }
-    return render(request, 'blog/blog_detail.html', context)
-
-# ==================== GALLERY VIEWS ====================
-def gallery(request):
-    """Display gallery"""
-    gallery_items = Gallery.objects.all().order_by('-uploaded_at')
-    
-    # Group by category
-    categories = Gallery.objects.values('category').annotate(count=Count('category'))
-    
-    context = {
-        'gallery_items': gallery_items,
-        'categories': categories,
-        'title': 'Gallery'
-    }
-    return render(request, 'gallery/gallery.html', context)
-
-# ==================== FAQ VIEWS ====================
-def faq(request):
-    """Display FAQs"""
-    faqs = FAQ.objects.filter(is_active=True).order_by('display_order', 'category')
-    
-    # Group by category
-    faq_by_category = {}
-    for faq_item in faqs:
-        category = faq_item.get_category_display()
-        if category not in faq_by_category:
-            faq_by_category[category] = []
-        faq_by_category[category].append(faq_item)
-    
-    context = {
-        'faq_by_category': faq_by_category,
-        'title': 'Frequently Asked Questions'
-    }
-    return render(request, 'faq/faq.html', context)
-
-# ==================== DONATION VIEWS ====================
-def donate(request):
-    """Donation page"""
-    if request.method == 'POST':
-        form = DonationForm(request.POST)
-        if form.is_valid():
-            donation = form.save(commit=False)
-            donation.transaction_id = f"DON{str(uuid.uuid4())[:8].upper()}"
-            donation.save()
-            
-            messages.success(request, 'Thank you for your donation!')
-            return redirect('core:donation_success', transaction_id=donation.transaction_id)
-    else:
-        form = DonationForm()
-    
-    context = {
-        'form': form,
-        'title': 'Donate'
-    }
-    return render(request, 'donation/donate.html', context)
-
-def donation_success(request, transaction_id):
-    """Donation success page"""
-    donation = get_object_or_404(Donation, transaction_id=transaction_id)
-    
-    context = {
-        'donation': donation,
-        'title': 'Donation Successful'
-    }
-    return render(request, 'donation/success.html', context)
-
-# ==================== API ENDPOINTS ====================
-@login_required
-@require_GET
-def get_dashboard_stats(request):
-    """Get dashboard statistics (for instructors/admins)"""
-    if not request.user.is_staff:
-        return JsonResponse({'error': 'Unauthorized'}, status=403)
-    
-    stats = {
-        'total_students': Student.objects.filter(is_active=True).count(),
-        'total_courses': Course.objects.filter(is_active=True, is_approved=True).count(),
-        'total_enrollments': Enrollment.objects.count(),
-        'total_revenue': Payment.objects.filter(status='completed').aggregate(Sum('amount'))['amount__sum'] or 0,
-        'pending_enrollments': Enrollment.objects.filter(enrollment_status='pending').count(),
-        'active_enrollments': Enrollment.objects.filter(enrollment_status='active').count(),
-    }
-    
-    return JsonResponse(stats)
-
-@login_required
-@require_GET
-def check_payment_reminders(request):
-    """Check for payment reminders"""
-    if not hasattr(request.user, 'student_profile'):
-        return JsonResponse({'has_reminders': False})
-    
-    student = request.user.student_profile
-    pending_payments = Payment.objects.filter(
-        student=student,
-        status='pending'
-    ).count()
-    
-    return JsonResponse({
-        'has_reminders': pending_payments > 0,
-        'count': pending_payments
-    })
-
-@login_required
-@require_POST
-def update_progress(request):
-    """Update progress (for AJAX)"""
-    try:
-        data = json.loads(request.body)
-        enrollment_id = data.get('enrollment_id')
-        
-        enrollment = Enrollment.objects.get(
-            id=enrollment_id,
-            student__user=request.user
-        )
-        
-        # Recalculate progress
-        enrollment.update_progress()
-        
-        return JsonResponse({
-            'success': True,
-            'progress': enrollment.progress_percentage
-        })
-    except Exception as e:
-        return JsonResponse({'error': str(e)}, status=400)
-
-# ==================== WISHLIST VIEWS ====================
-@login_required
-def wishlist(request):
-    """Display user's wishlist"""
-    if not hasattr(request.user, 'student_profile'):
-        messages.error(request, 'Please complete your student profile first.')
-        return redirect('core:profile_settings')
-    
-    student = request.user.student_profile
-    wishlist_items = Wishlist.objects.filter(student=student).select_related('course')
-    
-    context = {
-        'wishlist_items': wishlist_items,
-        'title': 'My Wishlist'
-    }
-    return render(request, 'wishlist/wishlist.html', context)
-
-@login_required
-@require_POST
-def add_to_wishlist(request):
-    """Add course to wishlist"""
-    course_id = request.POST.get('course_id')
-    course = get_object_or_404(Course, id=course_id, is_active=True)
-    student = get_object_or_404(Student, user=request.user)
-    
-    wishlist_item, created = Wishlist.objects.get_or_create(
-        student=student,
-        course=course
-    )
-    
-    if created:
-        return JsonResponse({'success': True, 'message': 'Added to wishlist'})
-    else:
-        return JsonResponse({'success': False, 'message': 'Already in wishlist'})
-
-@login_required
-@require_POST
-def remove_from_wishlist(request):
-    """Remove course from wishlist"""
-    course_id = request.POST.get('course_id')
-    student = get_object_or_404(Student, user=request.user)
-    
-    deleted = Wishlist.objects.filter(
-        student=student,
-        course_id=course_id
-    ).delete()
-    
-    if deleted[0] > 0:
-        return JsonResponse({'success': True, 'message': 'Removed from wishlist'})
-    else:
-        return JsonResponse({'success': False, 'message': 'Item not found'})
-
-# ==================== REVIEW VIEWS ====================
-@login_required
-def submit_review(request, course_slug):
-    """Submit course review"""
-    course = get_object_or_404(Course, slug=course_slug, is_active=True)
-    student = get_object_or_404(Student, user=request.user)
-    
-    # Check if user has completed the course
-    enrollment = Enrollment.objects.filter(
-        student=student,
-        course=course,
-        enrollment_status='completed'
-    ).first()
-    
-    if not enrollment:
-        messages.error(request, 'You must complete the course before reviewing it.')
-        return redirect('core:course_detail', course_slug=course_slug)
-    
-    # Check if already reviewed
-    existing_review = CourseReview.objects.filter(
-        student=student,
-        course=course
-    ).first()
-    
-    if request.method == 'POST':
-        form = CourseReviewForm(request.POST, instance=existing_review)
-        if form.is_valid():
-            review = form.save(commit=False)
-            review.student = student
-            review.course = course
-            review.enrollment = enrollment
-            review.is_verified = True
-            review.is_published = True
-            review.save()
-            
-            messages.success(request, 'Thank you for your review!')
-            return redirect('core:course_detail', course_slug=course_slug)
-    else:
-        form = CourseReviewForm(instance=existing_review)
-    
-    context = {
-        'course': course,
-        'form': form,
-        'existing_review': existing_review,
-        'title': f'Review {course.name}'
-    }
-    return render(request, 'reviews/submit_review.html', context)
-
-# ==================== CERTIFICATE VIEWS ====================
-@login_required
-def download_certificate(request, certificate_id):
-    """Download certificate"""
-    certificate = get_object_or_404(Certificate, id=certificate_id, student__user=request.user)
-    
-    # Increment download count
-    certificate.downloaded_count += 1
-    certificate.save()
-    
-    # Generate PDF (you need to implement this)
-    # For now, return a simple HTML page
-    context = {
-        'certificate': certificate,
-        'title': f'Certificate - {certificate.course_name}'
-    }
-    return render(request, 'certificates/certificate_pdf.html', context)
-
-def verify_certificate(request, verification_code):
-    """Verify certificate"""
-    certificate = get_object_or_404(Certificate, verification_code=verification_code, is_verified=True)
-    
-    context = {
-        'certificate': certificate,
-        'title': 'Verify Certificate'
-    }
-    return render(request, 'certificates/verify.html', context)
+def payment_history(request):
+    return HttpResponse("Payment History Page (Coming Soon)")
 
 # ==================== ERROR HANDLERS ====================
 def handler404(request, exception):

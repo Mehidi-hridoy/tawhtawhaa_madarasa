@@ -1,0 +1,152 @@
+{% load static %}
+<!-- Hero Section with Islamic Design -->
+<section class="hero-section position-relative overflow-hidden">
+    <!-- Islamic Pattern Overlay -->
+    <div class="islamic-pattern-overlay"></div>
+    
+    <!-- Decorative Arabic Calligraphy -->
+    <div class="arabic-decoration arabic-right">
+        <span class="arabic-text">الْعِلْمُ نُورٌ</span>
+        <small class="d-block text-light">Knowledge is Light</small>
+    </div>
+    <div class="arabic-decoration arabic-left">
+        <span class="arabic-text">اطْلُبُوا الْعِلْمَ</span>
+        <small class="d-block text-light">Seek Knowledge</small>
+    </div>
+    
+    <div class="container position-relative z-1">
+        <div class="row align-items-center min-vh-80">
+            <div class="col-lg-6">
+                <div class="mb-4">
+                    <span class="badge bg-light text-dark mb-3 px-3 py-2 rounded-pill">
+                        <i class="fas fa-star me-1 text-warning"></i> 
+                        <span class="arabic-font">التَّعْلِيْمُ الإِسْلاَمِيُّ الأَصِيْلُ</span>
+                    </span>
+                    <h1 class="display-4 fw-bold mb-4">
+                        <span class="arabic-calligraphy text-primary" style="font-size: 3.5rem;">طـا حـا</span>
+                        <span class="arabic-calligraphy text-success" style="font-size: 3.5rem;">زن نورين</span>
+                        <br>
+                        <span class="h3 text-light">Online Islamic Madrassa</span>
+                    </h1>
+                    <p class="lead mb-4 text-light">
+                        <i class="fas fa-quote-right text-warning me-2"></i>
+                        "An enlightened generation is our commitment." 
+                        Learn authentic Quran recitation, Tadabbur, and Islamic studies 
+                        from renowned Bangladeshi scholars following the path of the Salaf.
+                    </p>
+                    <div class="d-flex flex-wrap gap-3">
+                        <a href="{% url 'core:courses' %}" class="btn btn-primary btn-lg px-4 py-3 islamic-btn">
+                            <i class="fas fa-book-open me-2"></i>Explore Our Courses
+                        </a>
+                        <a href="{% url 'core:register' %}" class="btn btn-outline-light btn-lg px-4 py-3">
+                            <i class="fas fa-user-plus me-2"></i>Start Learning Journey
+                        </a>
+                    </div>
+                </div>
+                <div class="row mt-5">
+                    <div class="col-md-4">
+                        <div class="text-center">
+                            <div class="stat-icon mb-2">
+                                <i class="fas fa-user-graduate fa-2x text-warning"></i>
+                            </div>
+                            <h3 class="fw-bold text-white">{{ stats.total_students|add:"+" }}</h3>
+                            <p class="text-light mb-0">Seekers of Knowledge</p>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="text-center">
+                            <div class="stat-icon mb-2">
+                                <i class="fas fa-quran fa-2x text-success"></i>
+                            </div>
+                            <h3 class="fw-bold text-white">{{ stats.active_courses }}</h3>
+                            <p class="text-light mb-0">Islamic Programs</p>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="text-center">
+                            <div class="stat-icon mb-2">
+                                <i class="fas fa-award fa-2x text-primary"></i>
+                            </div>
+                            <h3 class="fw-bold text-white">{{ stats.successful_completions }}</h3>
+                            <p class="text-light mb-0">Certified Students</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-6">
+                <div class="position-relative">
+                    <div class="floating-elements">
+                        <!-- Quran Study Card -->
+                        <div class="floating-card floating-card-1 bg-white shadow-lg rounded-3 p-4 islamic-card">
+                            <div class="d-flex align-items-center mb-3">
+                                <div class="bg-primary rounded-circle p-3 me-3">
+                                    <i class="fas fa-quran text-white fa-lg"></i>
+                                </div>
+                                <div>
+                                    <h5 class="mb-0">Quran with Tajweed</h5>
+                                    <small class="text-muted">علم التجويد</small>
+                                </div>
+                            </div>
+                            <p class="text-muted small">Learn authentic Quran recitation following proper Tajweed rules as taught by the Prophet ﷺ</p>
+                            <div class="quran-verse text-end">
+                                <small class="text-primary">
+                                    <i class="fas fa-quote-left"></i> 
+                                    وَرَتِّلِ الْقُرْآنَ تَرْتِيلًا
+                                </small>
+                            </div>
+                        </div>
+                        
+                        <!-- Tadabbur Card -->
+                        <div class="floating-card floating-card-2 bg-white shadow-lg rounded-3 p-4 islamic-card">
+                            <div class="d-flex align-items-center mb-3">
+                                <div class="bg-success rounded-circle p-3 me-3">
+                                    <i class="fas fa-book text-white fa-lg"></i>
+                                </div>
+                                <div>
+                                    <h5 class="mb-0">Tadabbur Quran</h5>
+                                    <small class="text-muted">تدبر القرآن</small>
+                                </div>
+                            </div>
+                            <p class="text-muted small">Deep reflection and understanding of Quranic verses for practical application in life</p>
+                            <div class="quran-verse text-end">
+                                <small class="text-success">
+                                    <i class="fas fa-quote-left"></i> 
+                                    أَفَلَا يَتَدَبَّرُونَ الْقُرْآنَ
+                                </small>
+                            </div>
+                        </div>
+                        
+                        <!-- Seerah Card -->
+                        <div class="floating-card floating-card-3 bg-white shadow-lg rounded-3 p-4 islamic-card">
+                            <div class="d-flex align-items-center mb-3">
+                                <div class="bg-warning rounded-circle p-3 me-3">
+                                    <i class="fas fa-mosque text-white fa-lg"></i>
+                                </div>
+                                <div>
+                                    <h5 class="mb-0">Seerah & Sunnah</h5>
+                                    <small class="text-muted">سيرة النبي ﷺ</small>
+                                </div>
+                            </div>
+                            <p class="text-muted small">Study the life, character, and teachings of Prophet Muhammad ﷺ from authentic sources</p>
+                            <div class="quran-verse text-end">
+                                <small class="text-warning">
+                                    <i class="fas fa-quote-left"></i> 
+                                    لَقَدْ كَانَ لَكُمْ فِي رَسُولِ اللَّهِ أُسْوَةٌ حَسَنَةٌ
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Ayat decoration -->
+    <div class="ayat-decoration">
+        <p class="ayat-text">
+            <i class="fas fa-star-of-david text-warning me-2"></i>
+            يَرْفَعِ اللَّهُ الَّذِينَ آمَنُوا مِنكُمْ وَالَّذِينَ أُوتُوا الْعِلْمَ دَرَجَاتٍ
+            <i class="fas fa-star-of-david text-warning ms-2"></i>
+        </p>
+    </div>
+</section>

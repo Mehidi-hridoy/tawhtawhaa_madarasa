@@ -1,0 +1,267 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ page_title }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="h3 mb-0 text-gray-800">Admin Dashboard</h1>
+        <div>
+            <a href="{% url 'admin:index' %}" class="btn btn-primary">
+                <i class="fas fa-cog me-2"></i> Go to Admin Panel
+            </a>
+        </div>
+    </div>
+    
+    <!-- Statistics Cards -->
+    <div class="row">
+        <!-- Courses Card -->
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-primary shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
+                                Total Courses
+                            </div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ total_courses }}</div>
+                            <div class="mt-2 mb-0 text-muted text-xs">
+                                <span class="text-success mr-2">
+                                    <i class="fas fa-check-circle"></i> {{ active_courses }} Active
+                                </span>
+                            </div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-book fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Students Card -->
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-success shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
+                                Students
+                            </div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ total_students }}</div>
+                            <div class="mt-2 mb-0 text-muted text-xs">
+                                <span class="text-success mr-2">
+                                    <i class="fas fa-user-check"></i> {{ active_students }} Active
+                                </span>
+                            </div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-user-graduate fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Enrollments Card -->
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-info shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-info text-uppercase mb-1">
+                                Enrollments
+                            </div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ total_enrollments }}</div>
+                            <div class="mt-2 mb-0 text-muted text-xs">
+                                <span class="text-success mr-2">
+                                    <i class="fas fa-play-circle"></i> {{ active_enrollments }} Active
+                                </span>
+                                <span class="text-warning">
+                                    <i class="fas fa-graduation-cap"></i> {{ completed_enrollments }} Completed
+                                </span>
+                            </div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-clipboard-list fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Revenue Card -->
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-warning shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
+                                Total Revenue
+                            </div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">৳{{ total_revenue }}</div>
+                            <div class="mt-2 mb-0 text-muted text-xs">
+                                <span class="mr-2">
+                                    <i class="fas fa-receipt"></i> {{ total_payments }} Payments
+                                </span>
+                            </div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-dollar-sign fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Quick Actions -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card shadow">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Quick Actions</h6>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-3 mb-3">
+                            <a href="{% url 'admin:core_course_add' %}" class="btn btn-primary btn-block">
+                                <i class="fas fa-plus me-2"></i> Add Course
+                            </a>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <a href="{% url 'admin:core_instructor_add' %}" class="btn btn-success btn-block">
+                                <i class="fas fa-chalkboard-teacher me-2"></i> Add Instructor
+                            </a>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <a href="{% url 'admin:core_coupon_add' %}" class="btn btn-info btn-block">
+                                <i class="fas fa-tag me-2"></i> Create Coupon
+                            </a>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <a href="{% url 'admin:core_blogpost_add' %}" class="btn btn-warning btn-block">
+                                <i class="fas fa-blog me-2"></i> Add Blog Post
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Recent Activities -->
+    <div class="row">
+        <!-- Recent Courses -->
+        <div class="col-lg-4 mb-4">
+            <div class="card shadow">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Recent Courses</h6>
+                </div>
+                <div class="card-body">
+                    {% for course in recent_courses %}
+                    <div class="d-flex align-items-center mb-3">
+                        <div class="mr-3">
+                            <div class="icon-circle bg-primary">
+                                <i class="fas fa-book text-white"></i>
+                            </div>
+                        </div>
+                        <div>
+                            <div class="small text-gray-800">{{ course.name }}</div>
+                            <div class="small text-muted">
+                                {{ course.created_at|timesince }} ago
+                            </div>
+                        </div>
+                    </div>
+                    {% empty %}
+                    <p class="text-muted">No recent courses</p>
+                    {% endfor %}
+                    <a href="{% url 'admin:core_course_changelist' %}" class="btn btn-sm btn-link">
+                        View all courses
+                    </a>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Recent Enrollments -->
+        <div class="col-lg-4 mb-4">
+            <div class="card shadow">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-success">Recent Enrollments</h6>
+                </div>
+                <div class="card-body">
+                    {% for enrollment in recent_enrollments %}
+                    <div class="d-flex align-items-center mb-3">
+                        <div class="mr-3">
+                            <div class="icon-circle bg-success">
+                                <i class="fas fa-user-plus text-white"></i>
+                            </div>
+                        </div>
+                        <div>
+                            <div class="small text-gray-800">{{ enrollment.student.full_name }}</div>
+                            <div class="small text-muted">
+                                Enrolled in {{ enrollment.course.name }}
+                            </div>
+                            <div class="small text-muted">
+                                {{ enrollment.enrolled_at|timesince }} ago
+                            </div>
+                        </div>
+                    </div>
+                    {% empty %}
+                    <p class="text-muted">No recent enrollments</p>
+                    {% endfor %}
+                    <a href="{% url 'admin:core_enrollment_changelist' %}" class="btn btn-sm btn-link">
+                        View all enrollments
+                    </a>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Recent Payments -->
+        <div class="col-lg-4 mb-4">
+            <div class="card shadow">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-warning">Recent Payments</h6>
+                </div>
+                <div class="card-body">
+                    {% for payment in recent_payments %}
+                    <div class="d-flex align-items-center mb-3">
+                        <div class="mr-3">
+                            <div class="icon-circle bg-warning">
+                                <i class="fas fa-money-bill-wave text-white"></i>
+                            </div>
+                        </div>
+                        <div>
+                            <div class="small text-gray-800">৳{{ payment.amount }}</div>
+                            <div class="small text-muted">
+                                {{ payment.student.full_name }} - {{ payment.enrollment.course.name }}
+                            </div>
+                            <div class="small text-muted">
+                                {{ payment.payment_date|timesince }} ago
+                            </div>
+                        </div>
+                    </div>
+                    {% empty %}
+                    <p class="text-muted">No recent payments</p>
+                    {% endfor %}
+                    <a href="{% url 'admin:core_payment_changelist' %}" class="btn btn-sm btn-link">
+                        View all payments
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .icon-circle {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+</style>
+{% endblock %}

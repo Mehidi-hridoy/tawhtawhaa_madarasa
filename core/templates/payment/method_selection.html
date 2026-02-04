@@ -1,0 +1,161 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ page_title }}{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card shadow">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0"><i class="fas fa-credit-card me-2"></i> Select Payment Method</h4>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-info">
+                        <h5><i class="fas fa-info-circle me-2"></i> Course: {{ payment.enrollment.course.name }}</h5>
+                        <p class="mb-0">Amount: <strong class="text-primary">৳{{ payment.amount }}</strong></p>
+                        {% if payment.gateway_response.discount_amount %}
+                        <p class="mb-0 text-success">
+                            <i class="fas fa-tag me-1"></i> 
+                            Discount applied: ৳{{ payment.gateway_response.discount_amount }}
+                        </p>
+                        {% endif %}
+                    </div>
+                    
+                    <form method="POST">
+                        {% csrf_token %}
+                        
+                        <div class="row g-4">
+                            <!-- bKash -->
+                            <div class="col-md-6">
+                                <div class="payment-method-card" onclick="selectMethod('bkash')">
+                                    <input type="radio" name="payment_method" value="bkash" id="bkash" class="d-none">
+                                    <label for="bkash" class="w-100">
+                                        <div class="text-center p-4 border rounded">
+                                            <div class="mb-3">
+                                                <i class="fas fa-mobile-alt fa-3x" style="color: #E2136E;"></i>
+                                            </div>
+                                            <h5>bKash</h5>
+                                            <p class="text-muted mb-0">Mobile Banking</p>
+                                        </div>
+                                    </label>
+                                </div>
+                            </div>
+                            
+                            <!-- Nagad -->
+                            <div class="col-md-6">
+                                <div class="payment-method-card" onclick="selectMethod('nagad')">
+                                    <input type="radio" name="payment_method" value="nagad" id="nagad" class="d-none">
+                                    <label for="nagad" class="w-100">
+                                        <div class="text-center p-4 border rounded">
+                                            <div class="mb-3">
+                                                <i class="fas fa-wallet fa-3x" style="color: #F8A61F;"></i>
+                                            </div>
+                                            <h5>Nagad</h5>
+                                            <p class="text-muted mb-0">Mobile Banking</p>
+                                        </div>
+                                    </label>
+                                </div>
+                            </div>
+                            
+                            <!-- Bank Transfer -->
+                            <div class="col-md-6">
+                                <div class="payment-method-card" onclick="selectMethod('bank')">
+                                    <input type="radio" name="payment_method" value="bank" id="bank" class="d-none">
+                                    <label for="bank" class="w-100">
+                                        <div class="text-center p-4 border rounded">
+                                            <div class="mb-3">
+                                                <i class="fas fa-university fa-3x" style="color: #27ae60;"></i>
+                                            </div>
+                                            <h5>Bank Transfer</h5>
+                                            <p class="text-muted mb-0">Direct Bank Transfer</p>
+                                        </div>
+                                    </label>
+                                </div>
+                            </div>
+                            
+                            <!-- Rocket -->
+                            <div class="col-md-6">
+                                <div class="payment-method-card" onclick="selectMethod('rocket')">
+                                    <input type="radio" name="payment_method" value="rocket" id="rocket" class="d-none">
+                                    <label for="rocket" class="w-100">
+                                        <div class="text-center p-4 border rounded">
+                                            <div class="mb-3">
+                                                <i class="fas fa-bolt fa-3x" style="color: #5D2C8E;"></i>
+                                            </div>
+                                            <h5>Rocket</h5>
+                                            <p class="text-muted mb-0">DBBL Mobile Banking</p>
+                                        </div>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="mt-4 text-center">
+                            <button type="submit" class="btn btn-primary btn-lg px-5" id="submitBtn" disabled>
+                                <i class="fas fa-arrow-right me-2"></i> Continue
+                            </button>
+                            <a href="{% url 'core:course_detail' slug=payment.enrollment.course.slug %}" 
+                               class="btn btn-outline-secondary btn-lg ms-2">
+                                <i class="fas fa-arrow-left me-2"></i> Back to Course
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    function selectMethod(method) {
+        // Update radio button
+        document.getElementById(method).checked = true;
+        
+        // Remove active class from all cards
+        document.querySelectorAll('.payment-method-card').forEach(card => {
+            card.classList.remove('active');
+        });
+        
+        // Add active class to selected card
+        event.currentTarget.classList.add('active');
+        
+        // Enable submit button
+        document.getElementById('submitBtn').disabled = false;
+    }
+    
+    // Initialize if method already selected
+    document.addEventListener('DOMContentLoaded', function() {
+        const selectedMethod = '{{ payment.payment_method }}';
+        if (selectedMethod && selectedMethod !== 'pending') {
+            selectMethod(selectedMethod);
+        }
+    });
+</script>
+
+<style>
+    .payment-method-card {
+        cursor: pointer;
+        transition: all 0.3s;
+    }
+    
+    .payment-method-card:hover {
+        transform: translateY(-5px);
+    }
+    
+    .payment-method-card.active .border {
+        border-color: #3498db !important;
+        border-width: 2px !important;
+        background-color: #f8fafc;
+    }
+    
+    .payment-method-card input:checked + label .border {
+        border-color: #3498db !important;
+        border-width: 2px !important;
+        background-color: #f8fafc;
+    }
+</style>
+{% endblock %}

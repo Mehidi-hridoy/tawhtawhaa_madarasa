@@ -32,7 +32,8 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
 
-
+ 'django.contrib.humanize',
+ 
     # "unfold",                        # ← must be FIRST for styling to apply
     # "unfold.contrib.filters",        # optional but recommended — better filters
     # "unfold.contrib.forms",          # optional — nicer form widgets
@@ -40,6 +41,7 @@ INSTALLED_APPS = [
 
     'crispy_forms',
     'crispy_bootstrap5',
+    'widget_tweaks',
 
     'core',
 
@@ -75,6 +77,8 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
+                'core.context_processors.navbar_context',
+
             ],
         },
     },
@@ -89,10 +93,10 @@ WSGI_APPLICATION = 'tawhtawhaa_madarasa.wsgi.application'
 
 
 
-
 DATABASES = {
     'default': dj_database_url.config(
-        default='sqlite:///db.sqlite3'  # fallback if DATABASE_URL not set
+        default=f"sqlite:///{BASE_DIR / 'db.sqlite3'}",
+        conn_max_age=600,
     )
 }
 
@@ -138,8 +142,7 @@ STATIC_ROOT = BASE_DIR / 'staticfiles'
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
-
-
+EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 
 
 # settings.py additions

@@ -172,8 +172,9 @@ body {
 .hero-section {
     position: relative;
     overflow: hidden;
-    margin-top: -76px;
-    padding-top: 76px;
+    margin-top: -85px;
+    padding-top: 6rem !important;
+        
 }
 
 .hero-section .container {
