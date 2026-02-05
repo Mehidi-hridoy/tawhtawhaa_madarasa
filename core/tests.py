@@ -18,7 +18,7 @@ python manage.py runserver
 
 
 git add .
-git commit -m "Fix navabr"
+git commit -m "Fix navabr.."
 git push heroku main
 python manage.py runserver
 
