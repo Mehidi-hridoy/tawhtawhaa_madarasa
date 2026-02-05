@@ -12,7 +12,7 @@ python manage.py runserver
 git init
 
 git add .
-git commit -m "Updated the model n reset all "
+git commit -m "Updated the model n reset all.. "
 git push -u origin main
 python manage.py runserver
 
